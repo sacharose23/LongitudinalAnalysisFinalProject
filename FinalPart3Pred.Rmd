@@ -1,0 +1,270 @@
+---
+title: "FinalPart3Pred"
+author: "Sacha Robbins"
+date: "June 10, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set( echo = F, message = FALSE, warning = FALSE )
+# --
+# data visualization
+library(ggplot2) 
+library(GGally)
+library(gridExtra)
+library(knitr)
+library(kableExtra)
+# --
+library(tidyverse) # data science package
+library(MASS) # for glm.nb and other functions and datasets
+library(survival) # survival analysis package
+library(splines) # for ns function
+library(gee) # generalized estimation equation solver
+library(nlme) # for linear mixed effects models
+library(MCMCpack)
+library(rjags)
+library(rmeta) # forestplots
+# --
+source("https://www.ics.uci.edu/~dgillen/STAT212/Handouts/Stat212Functions.R")
+# --
+# Extras
+library(latex2exp) # math expressions in plots
+library( mvtnorm ) # in order to use rmvnorm
+library(leaps) # helpful for prediction modeling
+```
+
+```{r load data}
+bc <- read.csv("https://www.ics.uci.edu/~dgillen/STAT212/Data/bcarotene_212final2018.csv", header = TRUE)
+attach(bc)
+```
+
+# Question 1 - predictions of serum bc levels for 2 randomly selected patients at each dose level if they were to have stayed on treatment for additional 3 months
+
+We will build a predictive model using Bayesian Inference for Linear Mixed Effects model. We can draw from the posterior samples in order to obtain marginal estimates as well as subject-specific random intercepts and slopes. Let's concentrate on those who actually received some dosage level of BC supplement. We can ignore vitamin E levels, BMI, and age based on our exploration of these covariates and their effect on the impact that supplementation had on serum BC levels.
+
+```{r clean data}
+# calculate baseline measurement pre-treatment/placebo
+bc.base <- bc %>% 
+  filter( month >= 0 & month < 4) %>% 
+  group_by(ptid) %>% 
+  summarise(mean(bcarot, na.rm = T))
+
+bc.base <- as.data.frame(bc.base)
+
+# insert baseline measurement in place of bcarot for month "0" 
+n.obs <- unlist( lapply( split( bc$ptid, bc$ptid ), length ) )
+u.id <- unique(bc$ptid)
+
+bc$base <- rep(0, nrow(bc))
+for(j in 1:length(u.id)){
+  temp <- bc %>% filter(ptid == u.id[j])
+  id <- which(bc.base[,1]==u.id[j])
+  row <- which(bc$X == temp[1,1])
+  bc$base[row:(row+nrow(temp)-1)] <- rep(bc.base[id,2],nrow(temp))
+}
+
+# mean-center baseline measurement (base) in order to get a more interpretable intercept
+bc$mc.base <- bc$base - mean(bc$base)
+
+bc.pred <- bc %>% filter(month > 3 & month < 10 & dose > 0)
+bc.pred <- bc.pred[,-c(5,7,9,11)]
+
+sapply(bc.pred, function(x) sum(is.na(x)))
+bc.pred[which(is.na(bc.pred$bcarot)),]
+
+# replace patient 31 missing value with average of other bcarot values
+# seems to be a good fit to the trend
+temp <- bc.pred %>% filter(ptid == 31)
+bc.pred[which(is.na(bc.pred$bcarot)),"bcarot"] <- mean(as.numeric(temp$bcarot), na.rm = T)
+
+for(i in 1:nrow(bc.pred)){
+  if(bc.pred$dose[i] == 15) bc.pred$dose[i] <- 1
+  if(bc.pred$dose[i] == 30) bc.pred$dose[i] <- 2
+  if(bc.pred$dose[i] == 45) bc.pred$dose[i] <- 3 
+  if(bc.pred$dose[i] == 60) bc.pred$dose[i] <- 4 
+}
+
+for(i in 1:nrow(bc.pred)){
+  if(bc.pred$month[i] == 4) bc.pred$month[i] <- 0
+  if(bc.pred$month[i] == 5) bc.pred$month[i] <- 1
+  if(bc.pred$month[i] == 6) bc.pred$month[i] <- 2 
+  if(bc.pred$month[i] == 7) bc.pred$month[i] <- 3 
+  if(bc.pred$month[i] == 8) bc.pred$month[i] <- 4 
+  if(bc.pred$month[i] == 9) bc.pred$month[i] <- 5 
+}
+
+# now we have no missing values!
+```
+
+```{r}
+library(nlme)
+fit <- lme( bcarot ~ factor(dose) + male + chol + mc.base + month + month*factor(dose),
+            method = "ML",
+            random = reStruct( ~ 1 + month | ptid, pdClass="pdSymm"),
+            data = bc.pred )
+summary( fit )
+
+##
+#####	Setup data for use in JAGS
+##
+bc.pred.list <- list( 	N=length(unique(bc.pred$ptid)),
+					bc=bc.pred$bcarot,
+					dose=factor(bc.pred$dose),
+					male=factor(bc.pred$male),
+					month=bc.pred$month,
+					chol=bc.pred$chol,
+					mc.base=bc.pred$mc.base,
+					cluster.index=cumsum(c(1,table( bc.pred$ptid ))) )
+
+##
+#####	Specify the text string that will be fed to JAGS via R
+##
+model1.string <- "model{
+	for ( i in 1:N ){
+		# MVN for joint modeling intercepts and slopes
+		beta0.i[i] <- inter.slope[i,1]
+		beta.L.i[i] <- inter.slope[i,2]
+		inter.slope[i,1:2] ~ dmnorm(beta[i,1:2],D.inv[1:2,1:2])
+		
+		# Marginal means of intercept and slope (beta.L)
+		beta[ i, 1 ] <- beta0
+		beta[ i, 2 ] <- beta.L
+		
+		for ( j in cluster.index[ i ]:(cluster.index[ i+1 ] -1) ){
+			mu.bc[ j ] <- beta0.i[ i ] + beta.L.i[ i ]*dose[ j ]*month[ j ] + 
+                    beta.C1 * dose[ j ] +  beta.C2 * male[ j ] +  
+                    beta.C3 * chol[ j ] +  beta.C4 * mc.base[ j ]
+			bc[ j ] ~ dnorm(mu.bc[ j ], tau.bc)
+		}
+	}
+
+
+# priors
+beta0 ~ dnorm(0, 0.0001)
+beta.L ~ dnorm(0, 0.0001)
+beta.C1 ~ dnorm(0,0.0001)
+beta.C2 ~ dnorm(0,0.0001)
+beta.C3 ~ dnorm(0,0.0001)
+beta.C4 ~ dnorm(0,0.0001)
+
+# residual variance
+tau.bc ~ dgamma(0.5,0.0005)
+sigma2.bc <- pow(tau.bc,-1)
+
+# Wishart prior for the inverse covariance matrix 
+# (note parameterization here: if second argument
+# is equal to # of rand effects, then E[D]=R)
+D.inv[1:2,1:2] ~ dwish(R[1:2,1:2],2)
+R[1,1] <- 1000
+R[1,2] <- 0
+R[2,1] <- 0
+R[2,2] <- 1000
+
+# other items to compute
+# covariance matrix
+D[1:2,1:2] <- inverse(D.inv[1:2,1:2])
+
+# SD of the random effects
+sqrt.D11 <- pow(D[1,1], 0.5)
+sqrt.D22 <- pow(D[2,2], 0.5)
+
+# correlation between the intercepts and slopes
+cor.int.slope <- D[1,2]/(sqrt.D11*sqrt.D22)
+}"
+
+model1.spec<-textConnection(model1.string)
+jags <- jags.model(model1.spec,
+                   data = bc.pred.list,
+                    n.chains=4,
+                    n.adapt=100)
+```
+
+```{r}
+samps.coda <- coda.samples(jags,
+                            c(	'beta0','beta.L','beta.C1','beta.C2','beta.C3','beta.C4',
+                            	'sqrt.D11','sqrt.D22',
+                            	'cor.int.slope','sigma2.bc'),
+                            n.iter=20000,
+                            thin=20
+                            )
+```
+
+```{r}
+## 	Plot the chains for the longitudinal slope parameter (beta.L)
+samps.coda[[1]][,"beta.L"]
+par( mfrow=c(2,2) )
+for( i in 1:4 ){
+	plot( 	1:1000, samps.coda[[i]][,"beta.C1"],
+			xlab="Sample", ylab="beta.C1",
+			main=paste("beta.L : Chain",i), type="l", col=i )
+}
+
+## 	Plot the densities for the chains for all parameters
+##	Slightly more automated using coda plotting routines		
+plot(samps.coda)
+
+##	Check autocorrelation
+autocorr.plot(samps.coda)
+
+##### Obtain posterior summary statistics for marginal parameters
+summ.betas <- summary( samps.coda )
+```
+
+```{r}
+#####	Draw (keep) samples for the random effets
+samps.coda.rand <- coda.samples(jags,
+                            c(	'beta0.i','beta.L.i'),
+                            n.iter=10000,
+                            thin=10
+                            )
+summ.randeff <- summary( samps.coda.rand )
+```
+
+```{r}
+set.seed(123)
+pts15 <- sample(unique((bc.pred %>% filter(dose == 1))$ptid), 2)
+pts30 <- sample(unique((bc.pred %>% filter(dose == 2))$ptid), 2)
+pts45 <- sample(unique((bc.pred %>% filter(dose == 3))$ptid), 2)
+pts60 <- sample(unique((bc.pred %>% filter(dose == 4))$ptid), 2)
+pts <- c(pts15, pts30, pts45, pts60)
+pts.data <- list()
+for(i in 1:length(pts)){
+  pts.data[[i]] <- bc.pred %>% filter(ptid == pts[i])
+}
+
+randslopes <- summ.randeff$statistics[1:36,]
+randints <- summ.randeff$statistics[37:72,]
+
+pts.n <- c(0, length(pts))
+rslopes <- matrix(NA, nrow = length(pts), ncol = 2)
+rints <- matrix(NA, nrow = length(pts), ncol = 2)
+colnames(rints) <- colnames(rslopes) <- c("mean", "sd")
+
+for(i in 1:length(pts)){
+  pts.n[i] <- which(unique(bc.pred$ptid)==pts[i])
+  rslopes[i,] <- randslopes[pts.n[i],1:2]
+  rints[i,] <- randints[pts.n[i],1:2]
+}
+
+betas <- summ.betas$statistics[1:4,1:2]
+
+preds <- list()
+month <- c(1,2,3)
+for(i in 1:length(pts)){
+  preds[[i]] <- rints[i,1] + rslopes[i,1]*pts.data[[i]][1,5]*(max(pts.data[[i]][,3]) + month) + betas[1,1]*pts.data[[i]][1,5] + betas[2,1]*pts.data[[i]][1,6] + betas[3,1]*pts.data[[i]][1,7] + betas[4,1]*pts.data[[i]][1,8]
+}
+
+months <- 0:8
+bcarots <- list()
+for(i in 1:length(pts)){
+  bcarots[[i]] <- c( (bc.pred %>% filter(ptid == pts[i]))[,4], preds[[i]])
+}
+
+ggplot() + 
+  geom_point(aes(x=months, y=bcarots[[6]]) )
+
+```
+
+
+
+

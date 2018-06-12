@@ -1,0 +1,61 @@
+---
+title: "Understanding the Longitudinal Impact of Beta-Carotene (BC) Supplementation on Serum BC Levels"
+author: "Sacha Robbins"
+date: "June 113, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set( echo = F, message = FALSE, warning = FALSE )
+# --
+# data visualization
+library(ggplot2) 
+library(GGally)
+library(gridExtra)
+library(knitr)
+library(kableExtra)
+# --
+library(tidyverse) # data science package
+library(MASS) # for glm.nb and other functions and datasets
+library(survival) # survival analysis package
+library(splines) # for ns function
+library(gee) # generalized estimation equation solver
+library(nlme) # for linear mixed effects models
+library(MCMCpack)
+library(rjags)
+library(rmeta) # forestplots
+# --
+source("https://www.ics.uci.edu/~dgillen/STAT212/Handouts/Stat212Functions.R")
+# --
+# Extras
+library(latex2exp) # math expressions in plots
+library( mvtnorm ) # in order to use rmvnorm
+```
+
+```{r load data}
+bc <- read.csv("https://www.ics.uci.edu/~dgillen/STAT212/Data/bcarotene_212final2018.csv", header = TRUE)
+attach(bc)
+```
+
+# Abstract
+Since previous studies have shown that the highly antioxidant beta-carotene (BC) is associated with a decreased risk of cancer, its pharmacokinetics needs to be better understood. In this study, we used generalized estimating equations (GEE) to confirmed these associations: BC supplementation impacts serum BC levels over time and it varies depending on dosage level, and, after BC supplementation is ceased, the rate at which patients return to baseline does not differ by dosage. It is estimated that the relative difference in mean serum BC comparing patients in the treatment group with patients in the placebo group throughout the 6 month treatment phase is $823.09$ ug/mL (95% CI: [598.18, 1048.00]). This estimate increases to $1055.52$ ug/mL (95% CI: [991.29, 1119.74]) after the potential outlier observations of patient 57 are removed. As secondary analyses, we explored the potential differences in effect of BC supplementation on serum BC levels over time by other covariates: gender, cholesterol, age, and body mass index (BMI). We also explored the effect of BC supplementation on serum vitamin E over time. Lastly, we created a predictive linear mixed effects model using Bayesian methods and provided some predictions for randomly chosen patients if they were to extend their duration of the BC supplementation. The biggest challenge with this study was that the data set was greatly unbalanced between those receiving treatment to those receiving placebo (4:1 ratio). These challenges may have affected our models and inferences made. 
+
+# Introduction
+Statistics in the 2012 American Cancer Society journal predicted that by year 2030, there will be 21.7 million new cancer cases and 13 million cancer deaths worldwide. When you adjust for other environmental or lifestyle factors like smoking, diabetes, pollution, or fewer childbirths, the numbers can seem very daunting. Studies like this one help us move toward a better understanding of cancer and what we can do to prevent it. Many antioxidants like BC have been used to prevent and battle against cancer. It has been shown that BC is associated with a decreased risk of cancer, but that some physiological factors can affect the absorption, storage, and utilization of the drug, which could then affect the impact it has against cancer. Our analysis seeks to confirm that BC supplementation does significantly impact the serum BC levels over time and that that impact is magnified by higher dosages. We explore the effect of other covariates on the impact of the supplementation, and we also explore the effect that BC supplementation has on serum vitamin E levels over time. We were able to confirm these associations, but, we were unable to create a good predictive model. However, through our association analyses, we made some interesting discoveries that is worth further investigation.
+
+# Methods
+These data were collected over the course of 15 months (double-blind) that was split into three phases, which we will call *pre-treatment*, *treatment*, and *post-treatment* phase. At the start of the study, these baseline measurements (time-invariant covariates) were collected from each patient: age, gender, BMI, and cholesterol. On each monthly visit, plasma/serum BC (ug/mL) and plasma/serum vitamin E (ug/mL) were also collected from patients. From months 0 to 3, all patients were on placebo. 46 volunteers were randomized to receive one of five doses of BC (0, 15, 30, 45, or 60 mg/day) for a duration of 6 months (months 4 to 9). Then, after the ninth visit, all patients ceased supplementation and their levels were tracked for another 6 months. However, it is important to note that none of the 46 patients had data on months 11 and 12 and some patients had some missing monthly observations. Another interesting note is that there seems to be some patients missing as the patient id numbers extend to 57 whereas there are only 46 patients. 
+
+Our primary subset of data that we worked with was that during the treatment phase. We did some exploratory analysis in the pre-treatment phase just to get an understanding of our sample in terms of distribution of serum BC, serum vitamin E, age, gender, BMI, and cholesterol. We also grabbed a baseline serum BC and serum vitamin E measurements by taking the average of those in the pre-treatment phase. This provided a better association model with more efficient estimates and confidence intervals. When investigating the rate at which patients returned to baseline after supplementation, we of course opened up our analysis to the data in post-treatment phase.
+
+Patient 31 had missing serum BC and serum vitamin E levels for month 6. In order to utilize patient 31 in the analysis, that observation was filled in by the fitted value of a simple linear regression model based on the subject-specific trajectory during treatment phase. This seemed to be a reasonable decision instead of throwing away data. Patient 57 did not have missing information, but did seem like an abnormality. This patient's trajectory was clearly showing trends of someone taking BC supplement rather than a placebo. The deviation is blantantly noticeable. It is possible that Patient 57's dose was wrongly noted. Analysis with Patient 57 did not change the majority of our conclusions, but it did have a strong influence as briefly stated in the Abstract. For simplicity, our final models and inference will not include Patient 57.
+
+The randomization of this study eliminates the need to adjust for other covariates besides dose, an indicator for treatment or placebo (predictor of interest), and serum BC (response variable) for our primary analysis.  
+
+# Results
+
+
+# Appendix A
+
+
+# Appendix B
