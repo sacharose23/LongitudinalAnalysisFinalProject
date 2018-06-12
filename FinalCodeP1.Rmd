@@ -1,5 +1,5 @@
 ---
-title: "Final Part 1"
+title: "Final - Code Part 1"
 author: "Sacha Robbins"
 date: "May 12, 2018"
 output: pdf_document
@@ -39,10 +39,6 @@ attach(bc)
 
 # Does beta-carotene supplementation impact serum beta-carotene levels over time?
 
-$$Y_{ij}= \beta_0+\beta_1Tx_i+\beta_2base_{i}+\beta_3t_{ij} + \beta_4Tx_i*t_{ij}+\epsilon_{ij}$$ for $i^{th}$ patient and $j^{th}$ measure where $$Y_{ij}$$ is the plasma beta-carotene levels (ug/mL), $Tx_i$ is an indicator variable for whether or not a patient is on no drug (placebo) or on any dose treatment of beta-carotene supplementation. $base_{i}$ is the average of plasma beta-carotene measurements from months 0 to 3, which represents the patients baseline measurement before treatment/placebo. $t_{ij}=1,2,..,n_i$ keeps track of the measurements during treatment/placebo phase (months 4-9), where $n_i$ is the number of treatment measurements for $i^{th}$ patient. 
-
-## First model 
-
 ```{r first model clean-up}
 bc2 <- bc[, c("X", "ptid", "month", "bcarot", "dose")] %>% 
   filter( month < 10)
@@ -64,7 +60,7 @@ bc.base <- bc2 %>%
 bc.base <- as.data.frame(bc.base)
 
 # insert baseline measurement in place of bcarot for month "0" 
-n.obs <- unlist( l( split( bc2$ptid, bc2$ptid ), length ) )
+n.obs <- unlist( lapply( split( bc2$ptid, bc2$ptid ), length ) )
 u.id <- unique(bc2$ptid)
 
 bc2$base <- rep(0, nrow(bc2))
@@ -96,6 +92,8 @@ bc2[which(is.na(bc2$bcarot)),]
 temp <- bc2 %>% filter(ptid == 31)
 bc2[which(is.na(bc2$bcarot)),"bcarot"] <- mean(as.numeric(temp$bcarot), na.rm = T)
 
+dput(temp, "patient31")
+
 # now we have no missing values!
 ```
 
@@ -105,28 +103,27 @@ p.grp <- bc2 %>% filter(factor.dose == 0)
 t.grp <- bc2 %>% filter(factor.dose == 1)
 
 # Histogram of Mean Response Stratified by Placebo and Treatment Group
-ggplot() + 
+hist1 <- ggplot() + 
   geom_histogram(data = p.grp, aes(x=bcarot), color = "red", fill = "pink") + 
-  geom_histogram(data = t.grp, aes(x=bcarot), color = "blue", fill = "blue", alpha = 0.5)
+  geom_histogram(data = t.grp, aes(x=bcarot), color = "blue", fill = "blue", alpha = 0.5) + ggtitle("") + xlab("Serum BC (ug/mL)") + ylab("Count") + geom_text(aes(x=500, y=25), color="red", label = "Placebo Group") + geom_text(aes(x=2250, y=25), color="blue", label = "Treatment Group")
 
-which((bc2$bcarot > 1000) & (bc2$dose==0))
-bc2[256:260,]
-
-# patient 57 is clearly an anomaly; fit models without 57 and see if there are any differences 
-# w/o patient 57
-ggplot() + 
+hist2 <- ggplot() + 
   geom_histogram(data = p.grp %>% filter(ptid != 57), aes(x=bcarot), color = "red", fill = "pink") + 
-  geom_histogram(data = t.grp %>% filter(ptid != 57), aes(x=bcarot), color = "blue", fill = "blue", alpha = 0.5)
+  geom_histogram(data = t.grp %>% filter(ptid != 57), aes(x=bcarot), color = "blue", fill = "blue", alpha = 0.5) + ggtitle("Without Patient 57") + xlab("Serum BC (ug/mL)") + ylab("Count") + geom_text(aes(x=500, y=25), color="red", label = "Placebo Group") + geom_text(aes(x=2250, y=25), color="blue", label = "Treatment Group")
 
 # Spaghetti Plot of Mean Response Over Time Stratified by Placebo and Treatment Groups
-ggplot() +
+spag1 <- ggplot() +
   geom_line(data = p.grp, aes(x=time, y=bcarot, group=ptid), color="red", alpha = 0.6) + 
-  geom_line(data = t.grp, aes(x=time, y=bcarot, group=ptid), color="blue", alpha = 0.6)
+  geom_line(data = t.grp, aes(x=time, y=bcarot, group=ptid), color="blue", alpha = 0.6) + ggtitle("") + ylab("Serum BC (ug/mL)") + xlab("Time During Treatment Phase (months)") + geom_text(aes(x=5, y=2250), color="red", label = "Placebo Group") + geom_text(aes(x=5, y=2750), color="blue", label = "Treatment Group")
 
 # w/o patient 57
-ggplot() +
+spag2 <- ggplot() +
   geom_line(data = p.grp %>% filter(ptid != 57), aes(x=time, y=bcarot, group=ptid), color="red", alpha = 0.6) + 
-  geom_line(data = t.grp %>% filter(ptid != 57), aes(x=time, y=bcarot, group=ptid), color="blue", alpha = 0.6)
+  geom_line(data = t.grp %>% filter(ptid != 57), aes(x=time, y=bcarot, group=ptid), color="blue", alpha = 0.6) + ggtitle("Without Patient 57") + ylab("Serum BC (ug/mL)") + xlab("Time During Treatment Phase (months)") + geom_text(aes(x=5, y=2250), color="red", label = "Placebo Group") + geom_text(aes(x=5, y=2750), color="blue", label = "Treatment Group")
+
+grid.arrange(hist1, hist2, spag1, spag2, ncol=2)
+ggsave("plots.png", arrangeGrob(hist1, hist2, spag1, spag2))
+
 ```
 
 ```{r covariance EDA}
@@ -139,10 +136,13 @@ out <- lda.variogram( id=bc2$ptid, y=resids, x=bc2$time )
 dr <- out$delta.y
 dt <- out$delta.x
 var.est <- var( resids, na.rm = T )
-plot( dt, dr, pch=".", ylim=c(0, 1.2*var.est) )
-lines( smooth.spline( dt, dr, df=5 ), lwd=3 )
-abline( h=var.est, lty=2, lwd=2 )
-title("Plasma Beta-carotene Levels from Month 4-9 - Residual Variogram")
+
+variogram <- ggplot() +
+  geom_point(aes(x=dt, y=dr), pch = ".") + 
+  geom_smooth(aes(x=dt, y=dr)) + ylim(0, 1.2*var.est) + geom_hline(yintercept=var.est) + 
+  ggtitle("Variogram of Plasma BC Levels during Treatment Phase") + xlab("Delta Time") + ylab("Delta Residuals")
+
+ggsave("var.png", variogram)
 
 # There doesn't seem to be much of a serial process; everything points to exchangeable covariance structure.
 # covariance summaries / pairwise residual scatterplots
@@ -151,21 +151,23 @@ nobs <- length( bc2$bcarot )
 nsubjects <- length( table( bc2$ptid ) )
 rmat <- matrix( NA, nsubjects, 6 )
 ycat <- c( 1,2,3,4,5,6 )
-nj <- unlist( l( split( bc2$ptid, bc2$ptid ), length ) )
+nj <- unlist( lapply( split( bc2$ptid, bc2$ptid ), length ) )
 mymin <- function(x){ ifelse( sum( !is.na(x) )==0, NA, min(x, na.rm=TRUE ) ) }
 for( j in 1:6 ){
 	legal <- ( bc2$time >= ycat[j]-0.5 )&( bc2$time < ycat[j]+0.5 )
 	jtime <- bc2$time + 0.01*rnorm(nobs)
-	t0 <- unlist( l( split( abs(jtime - ycat[j]) , bc2$ptid ), min ) )
+	t0 <- unlist( lapply( split( abs(jtime - ycat[j]) , bc2$ptid ), min ) )
 	tj <- rep( t0, nj )
 	keep <- ( abs( jtime - ycat[j] )==tj ) & ( legal )
 	yj <- rep( NA, nobs )
 	yj[keep] <- resids[keep]
-	yj <- unlist( l( split( yj, bc2$ptid ), mymin ) )
+	yj <- unlist( lapply( split( yj, bc2$ptid ), mymin ) )
 	rmat[ , j ] <- yj
 }
-dimnames( rmat ) <- list( NULL, paste("time",c(1:6)) )
-pairs( rmat )
+dimnames( rmat ) <- list( NULL, paste("Month",c(4:9)) )
+
+pairs <- ggpairs(as.data.frame(rmat))
+ggsave("pairs.png", pairs)
 
 # Pairwise Residual Scatterplot reinforces that there is correlation between observations and it seems quite consistent --> exchangeable covariance
 #
@@ -182,12 +184,8 @@ for( j in 1:6 ){
 	nmat[j,k] <- njk
   }
 }
-print( round( cmat, 2 ) )
 vvec <- diag(cmat)
 cormat <- cmat/( outer( sqrt(vvec), sqrt(vvec) ) )
-print( round( cormat, 2 ) )
-print( nmat )
-
 # Number of observations per month seems balanced; tells us we can trust our empirical covariance and correlation matrices --> exchangeable
 ```
 
@@ -195,15 +193,18 @@ print( nmat )
 # fits a lm for each subject
 # outputs intercept and slopes
 indiv.lm <- lmList( bcarot ~ time | ptid , data=bc2 )
+
+path <- "~/Desktop/212/Final/"
+jpeg( file=paste( path, "randeffplot.jpg", sep="" ))
 plot( intervals( indiv.lm ) )
+dev.off()
+
 # more evidence of random intercepts; random slopes don't seem present.
 ```
 
-GEE models don't rely on a distribution assumption, but we do have continuous response variable with correlated data. So, GEE model seems like a good choice.  
-
 ```{r first model fit a model}
 # check nobs per subject
-n.obs <- unlist( l( split( bc2$ptid, bc2$ptid ), length ) )
+n.obs <- unlist( lapply( split( bc2$ptid, bc2$ptid ), length ) )
 table(n.obs)
 # get rid of subject 44 with < 3 obs
 bc2 <- bc2 %>% filter(ptid != 44)
@@ -214,47 +215,29 @@ bc2$mc.base <- bc2$base - mean(bc2$base)
 # now we have 44 subjects
 # fit the model
 fit <- gee(bcarot ~  factor.dose + mc.base + time + time*factor.dose, id = ptid, data = bc2, corstr = "exchangeable")
-summary(fit)$coeff
-plot(fit$fitted, fit$residuals, main="Residuals vs. Fitted Values")
-abline(h=0)
+table1 <- summary(fit)$coeff[,c(1,4)]
+row.names(table1) <- c("Intercept", "Tx", "Mc.Base", "Month", "Tx:Month")
 
 # fit the model w/o patient 57
-fit <- gee(bcarot ~ factor.dose + mc.base + time + time*factor.dose, id = ptid, data = bc2 %>% filter(ptid != 57), corstr = "exchangeable")
-summary(fit)$coeff
-plot(fit$fitted, fit$residuals, main="Residuals vs. Fitted Values w/o Patient 57")
-abline(h=0)
+fit2 <- gee(bcarot ~ factor.dose + mc.base + time + time*factor.dose, id = ptid, data = bc2 %>% filter(ptid != 57), corstr = "exchangeable")
+table2 <- summary(fit2)$coeff[,c(1,4)]
+row.names(table2) <- c("Intercept", "Tx", "Mc.Base", "Month", "Tx:Month")
+colnames(table2) <- c("Est (w/o 57)", "Robust SE (w/o 57)")
+
+table <- cbind(table1[,1], table2[,1], table1[,2], table2[,2])
+colnames(table) <- c("Estimates","Est (w/o 57)", "Robust SE","Robust SE (w/o 57)")
+
+dput(table, "output")
+
+res1 <- ggplot() +
+  geom_point(aes(x=fit$fitted, y=fit$residuals)) + ggtitle("Residuals vs. Fitted Values") + geom_hline(yintercept = 0) + xlab("Fitted Values") + ylab("Residuals")
+
+res2 <- ggplot() +
+  geom_point(aes(x=fit2$fitted, y=fit2$residuals)) + ggtitle("Without Patient 57") + geom_hline(yintercept = 0) + xlab("Fitted Values") + ylab("Residuals")
+
+ggsave("resplots.png", arrangeGrob(res1, res2))
 ```
 
-If $\beta_1=0$ and $\beta_4=0$, the impact of supplementation on serum beta-carotene would be the same regardless of what type of treatment a patient receives. In other words, treatment has no effect on the relationship between supplementation on serum beta-carotene over time. 
-
-Our models gives us strong evidence against these null hypotheses. 
-
-$\widehat{\beta_1}=823.09$ is the estimated relative difference in mean serum beta-carotene comparing patients in treatment group with patients in placebo group at the start of the treatment phase ($t_{ij}=0$ i.e. end of month 3 (95% confidence interval using robust standard error: [598.18, 1048.00] ug/mL). 
-
-$\widehat{\beta_4} + \widehat{\beta_3} = 17.89$ ug/mL is the estimated relative change in serum beta-carotene for every 1 month increase in time among patients who start the trial with similar baseline serum beta-carotene and receive supplementation (95% confidence interval using robust standard error: [-33.48, 69.25] ug/mL). 
-
-There doesn't seem to be strong evidence to reject $H_0:\beta_3=0$. This is not too surprising since our EDA showed serum beta-carotene levels of placebo group patients to be constant through time. 
-
-If we take $\beta_3=0$, then our previous estimate changes to $38.00$ ug/mL with 95% confidence interval [11.45, 64.56] ug/mL. 
-
-There is evidence that beta-carotene supplementation impacts serum beta-carotene over time.  
-
-
-Our inference does change without patient 57...
-
-Our estimate for $\beta_1$ increases, which makes sense since patient 57 had similar behavior of serum beta-carotene as those in treatment groups even though they received placebo. 
-
-$\widehat{\beta_1}=1055.52$ is the estimated relative difference in mean serum beta-carotene comparing patients in treatment group with patients in placebo group at the start of the treatment phase ($t_{ij}=0$ i.e. end of month 3 (95% confidence interval using robust standard error: [991.29, 1119.74] ug/mL). 
-
-We also gain more precision in our trajectory estimates. 
-
-$\widehat{\beta_4} + \widehat{\beta_3} = 18.00$ ug/mL is the estimated relative change in serum beta-carotene for every 1 month increase in time among patients who start the trial with similar baseline serum beta-carotene and receive supplementation (95% confidence interval using robust standard error: [4.46, 31.55] ug/mL). 
-
-This time, our estimate for $\beta_3$ and its standard error, leads us to fail to reject $H_0:\beta_3=0$. In general, the EDA supports the null. The model states that the change in serum beta-carotene for every 1 month increase in time among patients who start the trial with similar baseline serum beta-carotene and receive placebo is 6.16 ug/mL (95% confidence interval [2.72, 9.61] ug/mL). This is a very small change in serum beta-carotene over time for the placebo group. We need to remember that our placebo sample only contains 9 patients compared with treatment group that contains 35 patients. So, we can't really trust our inference here in general.
-
-When we eliminate patient 57, we have similar evidence that supports beta-carotene supplementation increases serum beta-carotene levels over time.
-
-The next question is if this impact is dose-dependent, is the impact of supplementation on serum beta-carotene over time different across dose levels.
 
 ## Stratify by doses
 
@@ -294,57 +277,55 @@ ggplot() +
 # mean plots
 # change dose into a factor
 bc$dose <- as.factor(bc$dose)
-ggplot(bc, aes(x=month, y=bcarot, fill= dose)) +
+mean1 <- ggplot(bc, aes(x=month, y=bcarot, fill= dose)) +
   geom_point(pch=1) + 
   geom_smooth() + 
   ggtitle("Mean Plot of Data Stratified by Doses of Treatment") + 
-  ylab("Beta Carotene Level") + 
+  ylab("BC Level") + 
   xlab("Month") + 
   geom_vline(xintercept=c(3,9))
 
 # w/o patient 57
-ggplot(bc %>% filter(ptid != 57), aes(x=month, y=bcarot, fill= dose)) +
+mean2 <- ggplot(bc %>% filter(ptid != 57), aes(x=month, y=bcarot, fill= dose)) +
   geom_point(pch=1) + 
   geom_smooth() + 
-  ggtitle("Mean Plot of Data Stratified by Doses of Treatment w/o Patient 57") + 
-  ylab("Beta Carotene Level") + 
+  ggtitle("Without Patient 57") + 
+  ylab("BC Level") + 
   xlab("Month") + 
   geom_vline(xintercept=c(3,9))
 
 # w/o placebo group since we know that placebo doesn't affect serum beta-carotene levels
-ggplot(bc %>% filter(dose != 0 & month >= 4), aes(x=month, y=bcarot, fill= dose)) +
+mean3 <- ggplot(bc %>% filter(dose != 0 & month >= 4), aes(x=month, y=bcarot, fill= dose)) +
   geom_point(pch=1) + 
   geom_smooth() + 
-  ggtitle("Mean Plot of Data Stratified by Doses of Treatment") + 
-  ylab("Beta Carotene Level") + 
+  ggtitle("Treatment & Post-Treatment Phases without Placebo Group") + 
+  ylab("BC Level") + 
   xlab("Month") + 
   geom_vline(xintercept=9)
+
+ggsave("meanplots.png", arrangeGrob(mean1, mean2, mean3))
+
 ```
 
 ## Model Investigating Dose-Dependent Impact
-
-In this model we are still looking at months 4 to 9 (treatment period), but we only look at those who received supplementation. Our question of interest is whether the impact of beta-carotene supplementation on serum beta-carotene levels over time is dose-dependent. 
-
-$$E[Y_{ij}]=\beta_0+\beta_1(dose_i/15)+\beta_2mc.base_i+\beta_3t_{ij}+\beta_4t_{ij}(dose_i/15)$$
-If $\beta_1=0$ and $\beta_4=0$, then all patients would have the same model regardless of their dosage. 
 
 ```{r fit model with various dose levels}
 # fit the model with factor dose (15,30,45,60)
 # we don't need to worry about patient 57, since they were assigned placebo
 
 fit <- gee(bcarot ~ I(dose/15) + mc.base + time + time*I(dose/15), id = ptid, data = bc2 %>% filter(dose != 0), corstr = "exchangeable")
-summary(fit)$coeff
-plot(fit$fitted, fit$residuals, main="Residuals vs. Fitted Values")
-abline(h=0)
+output <- summary(fit)$coeff[,c(1,4)]
+row.names(output) <- c("Intercept", "Dose/15", "Mc.Base", "Month", "(Dose/15):Month")
+
+dput(output, "output2")
+
+res1 <- ggplot() +
+  geom_point(aes(x=fit$fitted, y=fit$residuals)) + geom_hline(yintercept = 0) + xlab("Fitted Values") + ylab("Residuals")
+
+ggsave("doseresplot.png", res1)
 ```
 
-$\widehat{\beta_1} + \widehat{\beta_4} = 122.46$ ug/mL is the estimated relative difference in the trajectory of serum beta-carotene comparing two subpopulations of patients who differ in dosage by 15 ug/mL with similar baseline serum beta-carotene (95% confidence interval using robust standard error: [54.23, 190.69] ug/mL). The higher the dosage that a patient receives, the larger their increase of serum beta-carotene over time. We have strong evidence to reject our null hypothesis. Our results support our observations from the previous EDA.
-
 ## Is there a difference by dose in the rate at which patients return to baseline after ceasing supplementation?
-
-Based on our last figure, there does NOT seem to be a difference by dose in the rate at which patients return to baseline after ceasing supplementation. The trajectories seem to stay parallel with one another with highest dose above and lowest dose below.
-
-To fit our model we need to focus on months 9 to 15 and again only those who receive supplementation. We can fit the same model to answer our scientific question.
 
 ```{r clean up}
 bc <- read.csv("https://www.ics.uci.edu/~dgillen/STAT212/Data/bcarotene_212final2018.csv", header = TRUE)
@@ -361,7 +342,7 @@ bc.base <- bc3 %>%
 bc.base <- as.data.frame(bc.base)
 
 # insert baseline measurement in place of bcarot for month "0" 
-n.obs <- unlist( l( split( bc3$ptid, bc3$ptid ), length ) )
+n.obs <- unlist( lapply( split( bc3$ptid, bc3$ptid ), length ) )
 u.id <- unique(bc3$ptid)
 
 bc3$base <- rep(0, nrow(bc3))
@@ -383,11 +364,11 @@ for(i in 1:nrow(bc3)){
   if(bc3$time[i] == 15) bc3$time[i] <- 5 
 }
 
-s(bc3, function(x) sum(is.na(x)))
+sapply(bc3, function(x) sum(is.na(x)))
 # we have no missing values!
 
 # check nobs per subject
-n.obs <- unlist( l( split( bc3$ptid, bc3$ptid ), length ) )
+n.obs <- unlist( lapply( split( bc3$ptid, bc3$ptid ), length ) )
 table(n.obs)
 
 # get rid of subjects 4, 31, and 57 with < 3 obs
@@ -407,10 +388,13 @@ out <- lda.variogram( id=bc3$ptid, y=resids, x=bc3$time )
 dr <- out$delta.y
 dt <- out$delta.x
 var.est <- var( resids, na.rm = T )
-plot( dt, dr, pch=".", ylim=c(0, 1.2*var.est) )
-lines( smooth.spline( dt, dr, df=5 ), lwd=3 )
-abline( h=var.est, lty=2, lwd=2 )
-title("Plasma Beta-carotene Levels from Month 10-15 - Residual Variogram")
+
+variogram <- ggplot() +
+  geom_point(aes(x=dt, y=dr), pch = ".") + 
+  geom_smooth(aes(x=dt, y=dr)) + ylim(0, 1.2*var.est) + geom_hline(yintercept=var.est) + 
+  ggtitle("Variogram of Plasma BC Levels during Post-Treatment Phase") + xlab("Delta Time") + ylab("Delta Residuals")
+
+ggsave("var2.png", variogram)
 
 # Small measurement error, large random intercept, and serial process
 
@@ -428,21 +412,24 @@ nobs <- length( bc3$bcarot )
 nsubjects <- length( table( bc3$ptid ) )
 rmat <- matrix( NA, nsubjects, 4 )
 ycat <- c( 1,2,3,4 )
-nj <- unlist( l( split( bc3$ptid, bc3$ptid ), length ) )
+nj <- unlist( lapply( split( bc3$ptid, bc3$ptid ), length ) )
 mymin <- function(x){ ifelse( sum( !is.na(x) )==0, NA, min(x, na.rm=TRUE ) ) }
 for( j in 1:4 ){
 	legal <- ( bc3$time2 >= ycat[j]-0.5 )&( bc3$time2 < ycat[j]+0.5 )
 	jtime <- bc3$time2 + 0.01*rnorm(nobs)
-	t0 <- unlist( l( split( abs(jtime - ycat[j]) , bc3$ptid ), min ) )
+	t0 <- unlist( lapply( split( abs(jtime - ycat[j]) , bc3$ptid ), min ) )
 	tj <- rep( t0, nj )
 	keep <- ( abs( jtime - ycat[j] )==tj ) & ( legal )
 	yj <- rep( NA, nobs )
 	yj[keep] <- resids[keep]
-	yj <- unlist( l( split( yj, bc3$ptid ), mymin ) )
+	yj <- unlist( lapply( split( yj, bc3$ptid ), mymin ) )
 	rmat[ , j ] <- yj
 }
-dimnames( rmat ) <- list( NULL, paste("time",c(10,13,14,15)) )
-pairs( rmat )
+dimnames( rmat ) <- list( NULL, paste("Month",c(10,13,14,15)) )
+
+pairs <- ggpairs(as.data.frame(rmat))
+ggsave("pairs2.png", pairs)
+
 
 # It's difficult to discern if there is serial process  in Pairwise Residual Scatterplot
 
@@ -457,28 +444,25 @@ for( j in 1:4 ){
 	nmat[j,k] <- njk
   }
 }
-print( round( cmat, 2 ) )
 vvec <- diag(cmat)
 cormat <- cmat/( outer( sqrt(vvec), sqrt(vvec) ) )
-print( round( cormat, 2 ) )
-print( nmat )
 
 # We still can't tell if there is an AR-1 process since n is small. So, let's fit the same model with AR-1 process.
 ```
 
 ```{r fit model AR-1 }
-fit2 <- gee(bcarot ~ I(dose/15) + mc.base + time + time*I(dose/15), id = ptid, data = bc3 %>% filter(dose != 0), corstr = "AR-M", Mv=1)
-summary(fit2)$coeff
-plot(fit$fitted, fit$residuals, main="Residuals vs. Fitted Values")
-abline(h=0)
+fit3 <- gee(bcarot ~ I(dose/15) + mc.base + time + time*I(dose/15), id = ptid, data = bc3 %>% filter(dose != 0), corstr = "AR-M", Mv=1)
+table <- summary(fit3)$coeff[,c(1,4)]
+row.names(table) <- c("Intercept", "Dose/15", "Mc.Base", "Month", "(Dose/15):Month")
+
+dput(table, "output3")
+
+res3 <- ggplot() +
+  geom_point(aes(x=fit3$fitted, y=fit3$residuals)) + geom_hline(yintercept = 0) + xlab("Fitted Values") + ylab("Residuals")
+
+ggsave("postresplot.png", res3)
 ```
 
-Our EDA eluded to an autoregressive-1 working correlation structure. So, unlike previous models, we will fit the model using an AR-1 covariance structure. Our residuals plot shows slight funneling as fitted values increase, so we will again use our robust variance estimates. 
 
-$\widehat{\beta_4} = 11.38$ ug/mL is the estimated relative difference in the decreasing trajectories of serum beta-carotene post-treatment comparing two subpopulations of patients who differed in dosage by 15 ug/mL during treatment and similar in baseline serum beta-carotene (95% confidence interval using robust standard error: [-23.31, 0.55] ug/mL). 
-
-We have evidence to fail to reject our null hypothesis. Our results support our observations from the previous EDA. The trajectories in the decrease of serum beta-carotene seem parallel across dosage levels. 
-
-If we take $\beta_4=0$, then the estimated serum beta-carotene post-treatment across dosage levels is $-153.37$ ug/mL for every one month increase for patients with similar baseline serum beta-carotene (95% confidence interval [-181.80, -124.94] ug/mL).
 
 
