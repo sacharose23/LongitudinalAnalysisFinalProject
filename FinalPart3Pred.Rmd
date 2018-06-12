@@ -40,7 +40,6 @@ attach(bc)
 
 # Question 1 - predictions of serum bc levels for 2 randomly selected patients at each dose level if they were to have stayed on treatment for additional 3 months
 
-We will build a predictive model using Bayesian Inference for Linear Mixed Effects model. We can draw from the posterior samples in order to obtain marginal estimates as well as subject-specific random intercepts and slopes. Let's concentrate on those who actually received some dosage level of BC supplement. We can ignore vitamin E levels, BMI, and age based on our exploration of these covariates and their effect on the impact that supplementation had on serum BC levels.
 
 ```{r clean data}
 # calculate baseline measurement pre-treatment/placebo
