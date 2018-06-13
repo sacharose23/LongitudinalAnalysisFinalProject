@@ -51,7 +51,7 @@ Patient 31 had missing serum BC and serum vitamin E levels for month 6. In order
 
 The randomization of this study eliminates the need to adjust for other covariates besides dose, an indicator for treatment or placebo (predictor of interest), and serum BC (continuous response variable) for our primary scientific questions of interest. We chose to take a semi-parametric approach by fitting generalized estimating equations (GEE). Here we do not need to assume a full distribution on our continuous response variables, serum BC and serum vitamin E, and we could implement a covariance structure since we have inherently correlated data. Huber-White tells us that our regression estimates are consistent even if we misspecify the dependence model. GEE allowed us to gain efficiency in our estimators by assuming an exchangeable covariance structure based on our exploratory data analysis (EDA) in Appendix A. The appropriateness of the models were assessed using residual plots, and we used empirical correlation/covariance matrices and variograms for the EDA on our $\Sigma_i=Cov[Y_{i}]$, which can also be found in Appendix A. To safeguard our inference, we used the robust variance estimates. Implementation of the models was conducted using 'gee' package version 4.13-19 and RStudio version 1.1.414.
 
-$Y_{ij}= \beta_0+\beta_1Tx_i+\beta_2mc.base_{i}+\beta_3month_{ij} + \beta_4Tx_i*month_{ij}+\epsilon_{ij}$ is the GEE model we used for the $i^{th}$ patient and $j^{th}$ measurement where $Y_{ij}$ is the plasma BC levels (ug/mL), $Tx_i$ is an indicator variable for whether or not a patient is on any dose treatment of BC supplementation besides the placebo. $mc.base_{i}$ is the mean-centered averages of plasma BC measurements from the pre-treatment phase. We mean-centered the covariate for better interpretability. $month_{ij}=1,2,..,n_i$ keeps track of the measurements during treatment phase, where $n_i$ is the number of treatment measurements for $i^{th}$ patient. Error terms are assumed independent and centered at zero with an independent covariance matrix.
+$Y_{ij}= \beta_0+\beta_1Tx_i+\beta_2mc.base_{i}+\beta_3month_{ij} + \beta_4Tx_i*month_{ij}+\epsilon_{ij}$ is the GEE model we used for the $i^{th}$ patient and $j^{th}$ measurement where $Y_{ij}$ is the plasma BC levels (ug/mL), $Tx_i$ is an indicator variable for whether or not a patient is on any dose treatment of BC supplementation besides the placebo. $mc.base_{i}$ is the mean-centered averages of plasma BC measurements from the pre-treatment phase. We mean-centered the covariate for better interpretability. $month_{ij}=1,2,..,n_i$ keeps track of the measurements during treatment phase, where $n_i$ is the number of treatment measurements for $i^{th}$ patient. Most patients have all six observations during the Treatment phase, but some have as low as 2 observations. Patients with less than three observations in any of the three phases were not used. Error terms are assumed independent and centered at zero with an independent covariance matrix.
 
 To investigate whether the impact of BC supplementation on serum BC levels over time was dose-dependent, we focused on Treatment Phase and only those who received supplementation. Our mean model here was $E[Y_{ij}]=\beta_0+\beta_1(dose_i/15)+\beta_2mc.base_i+\beta_3t_{ij}+\beta_4t_{ij}(dose_i/15)$. Instead of an indicator variable for treatment, we tranformed dose by dividing by 15 for better interpretability. 
 
@@ -161,6 +161,9 @@ knitr::include_graphics("predplots2.png")
 
 # Discussion
 
+It is important to note some limitations with our data. With all the models we fit, we never once used all 46 patients. The age distribution of these 46 volunteers ranged from 50 to 65 years. All our models and inference can only be applied to that type of population. Other potential confounding factors like diet and environmental exposures may also contribute to our results. There was some missing data for Patient 31 and outliers associated with Patient 57. 
+
+We propose that there is still more investigation that needs to be done. Why were there gaps in the list of patient id's? What happened to those other patients/volunteers? These serum BC level trends definitely differed by gender; females had consistently higher mean serum BC levels than males. Other confounding variables that might explain this discrepancy needs to be investigated further. How can we explain the drastic dip above marginal average in serum vitamin E levels immediately after ceasing BC supplementation and the sharp increase around month 14. Lastly, BMI is highly correlated with serum BC levels and seems to effect these levels over time during Treatment phase. In general, even though model results confirmed most of our suspicions drawn from extensive EDA, there is clearly still much to explore beyond our limited data set and small time frames.
 
 
 # Appendix A
@@ -170,52 +173,50 @@ tablePatient31 <- dget("patient31")
 colnames(tablePatient31) <- c("Obs.", "Patient ID", "Month", "BC", "Dosage", "Tx", "Baseline BC")
 row.names(tablePatient31) <- NULL
 kable <- kable(tablePatient31, format="latex", booktabs=T, align='c', 
-               caption = "Table #: Patient 31 Missing Value Replaced with Average (968.4 ug/mL)")
+               caption = "Table 8: Patient 31 Missing Value Replaced with Average (968.4 ug/mL)")
 kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
 ```
 
-```{r variograms, echo=FALSE, fig.cap="", out.width = '50%', out.height='50%'}
+```{r variograms, echo=FALSE, fig.cap="Figure 5: Variograms", out.width = '50%', out.height='50%'}
 knitr::include_graphics("var.png")
 knitr::include_graphics("var2.png")
 knitr::include_graphics("var3.png")
 ```
 
-```{r pairs plot, echo=FALSE, fig.cap="Empirical Correlation Matrix during Treatment Phase", out.width = '50%', out.height='50%'}
+```{r pairs plot, echo=FALSE, fig.cap="Figure 6: Empirical Correlation Matrix during Treatment Phase", out.width = '50%', out.height='50%'}
 knitr::include_graphics("pairs.png")
 ```
 
-```{r pairs plot2, echo=FALSE, fig.cap="Empirical Correlation Matrix during Post-Treatment Phase for Patients Having Received Treatment", out.width = '50%', out.height='50%'}
+```{r pairs plot2, echo=FALSE, fig.cap="Figure 7: Empirical Correlation Matrix during Post-Treatment Phase for Patients Having Received Treatment", out.width = '50%', out.height='50%'}
 knitr::include_graphics("pairs2.png")
 ```
 
-```{r pairs plot, echo=FALSE, fig.cap="Subject-Specific Random Effects During Treatment Phase", out.width = '50%', out.height='50%'}
+```{r pairs plot, echo=FALSE, fig.cap="Figure 8: Subject-Specific Random Effects During Treatment Phase", out.width = '50%', out.height='50%'}
 knitr::include_graphics("randeffplot.jpg")
 ```
 
-```{r res plot, echo=FALSE, fig.cap="Residual vs. Fitted Value Plots of Main Model", out.width = '50%', out.width='50%'}
+```{r res plot, echo=FALSE, fig.cap="Figure 9: Residual vs. Fitted Value Plots of Main Model", out.width = '50%', out.width='50%'}
 knitr::include_graphics("resplots.png")
 ```
 
-```{r res plot2, echo=FALSE, fig.cap="Residual vs. Fitted Value Plots of Dose-Dependent Model", out.width = '50%', out.width='50%'}
+```{r res plot2, echo=FALSE, fig.cap="Figure 10: Residual vs. Fitted Value Plots of Dose-Dependent Model", out.width = '50%', out.width='50%'}
 knitr::include_graphics("doseresplot.png")
 ```
 
-```{r bmi plot, echo=FALSE, fig.cap="Scatterplot between BMI and Average BC Levels Stratified by Gender (Pre-Treatment)", out.width = '100%'}
+```{r bmi plot, echo=FALSE, fig.cap="Figure 11: Scatterplot between BMI and Average BC Levels Stratified by Gender (Pre-Treatment)", out.width = '100%'}
 knitr::include_graphics("bmi.png")
 ```
 
-```{r covariates plots, echo=FALSE, fig.cap="Mean Plots of Serum BC Levels vs. Various Covariates (Treatment)", out.width = '50%', out.width='50%'}
+```{r covariates plots, echo=FALSE, fig.cap="Figure 12: Mean Plots of Serum BC Levels vs. Various Covariates (Treatment)", out.width = '50%', out.width='50%'}
 knitr::include_graphics("covplot1.png")
 knitr::include_graphics("covplots2.png")
 ```
 
-```{r covariates plots, echo=FALSE, fig.cap="Spaghetti Plots (by Cholesterol, BMI, and Age Categories, respectively)", out.width = '50%', out.width='50%'}
+```{r covariates plots, echo=FALSE, fig.cap="Figure 13: Spaghetti Plots (by Cholesterol, BMI, and Age Categories, respectively)", out.width = '50%', out.width='50%'}
 knitr::include_graphics("cholspag.png")
 knitr::include_graphics("bmispag.png")
 knitr::include_graphics("agespag.png")
 ```
-
-# Appendix B
 
 
 
