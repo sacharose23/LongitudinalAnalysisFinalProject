@@ -1,12 +1,12 @@
 ---
 title: "Understanding the Longitudinal Impact of Beta-Carotene (BC) Supplementation on Serum BC Levels"
 author: "Sacha Robbins"
-date: "June 113, 2018"
+date: "June 13, 2018"
 output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set( echo = F, message = FALSE, warning = FALSE )
+knitr::opts_chunk$set( echo = F, message = FALSE, warning = FALSE, out.width = "80%", fig.pos = 'h', fig.align = "center")
 # --
 # data visualization
 library(ggplot2) 
@@ -14,6 +14,8 @@ library(GGally)
 library(gridExtra)
 library(knitr)
 library(kableExtra)
+library(png)
+library(jpeg)
 # --
 library(tidyverse) # data science package
 library(MASS) # for glm.nb and other functions and datasets
@@ -57,20 +59,19 @@ To investigate whether the impact of BC supplementation on serum BC levels over 
 
 Our final secondary aim was to build a predictive model for serum BC level if patients were to extend their supplementation another three months. We used Bayesian Inference for linear mixed effects (LME) model in order to create a predictive model. Here, we were able to place non-informative priors, and through Gibbs sampling technique we were able to draw from the posterior distribution of the parameters. From there, we were able to obtain marginal estimates as well as subject-specific random intercepts and slopes. Our covariance matrix for our random effects was assumed to folow an inverse Wishart distribution. Here, we ignored vitamin E levels, BMI, and age based on our exploration of these covariates and their effect on the impact that supplementation had on serum BC levels. Here is our mean model: $E[Y_{ij}|\vec{b_i}] = \beta_0 + \beta_{C1}Tx_i + \beta_{C2}Male_i + \beta_{C3}Chol_i + \beta_{C4}base_i + \beta_{L1}month_{ij} + \beta_{L2}Tx_i\cdot month_{ij}$. Implementation of the model was conducted using 'rjags' package version 4-6.
 
-
 # Results
 
 Recall our mean model fitted in order to investigate the impact of BC supplementation on serum BC levels over time: $E[Y_{ij}]= \beta_0+\beta_1Tx_i+\beta_2mc.base_{i}+\beta_3month_{ij} + \beta_4Tx_i*month_{ij}$. If $\beta_1=0$ and $\beta_4=0$, the longitudinal model would be the same regardless of what type of treatment a patient receives. Figure 1 visually shows some support against these null hypotheses as well as the potential influence of Patient 57.
 
-```{r patient 57, echo=FALSE, fig.cap="Figure 1: Histograms and Spaghetti Plots of Serum BC with and without Patient 57", out.width = '100%'}
+```{r patient 57, echo=FALSE, fig.cap="Histograms and Spaghetti Plots Comparing Distributions of Serum BC Levels with and without Patient 57"}
 knitr::include_graphics("plots.png")
 ```
 
 ```{r table outputs}
 table <- dget("output")
 kable <- kable(table, format="latex", booktabs=T, align='c', 
-               caption = "Table 1: Output from GEE Model Comparing with and without Patient 57")
-kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
+               caption = "Output from GEE Model Comparing with and without Patient 57")
+kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F, font_size = 7)
 ```
 
 Table 1 shows the estimates for these regression parameters after fitting models with and without Patient 57. Let's first consider the model with Patient 57. $\widehat{\beta_1}=823.09$ is the estimated relative difference in mean serum BC comparing treated patients with placebo-treated patients with same average baseline BC measures after one month into the Treatment Phase  (95% CI: [598.18, 1048.00] ug/mL). There is strong evidence that BC supplementation does marginally impact serum BC levels. But, our estimate for $\beta_4 + \beta_3$ is insignificant for this model; we don't have strong evidence that suggests different rates of serum BC between treated and placebo-treated patients.
@@ -81,15 +82,15 @@ The next question of interest is if the impact of BC supplementation on serum BC
 
 If $\beta_1=0$ and $\beta_4=0$, then all treated patients ($N_T=35$) would have the same model regardless of their dosage level. Again, here we are only focusing on the treated patients, so Patient 57 is of no concern. Our mean plots in Figure 2 shows that dosage level may be influential during the treatment, but the dosage level may not be influential in the decrease to baseline of serum BC levels post-treatment. The post-treatment trajectories seem to stay parallel with one another with highest dose above and lowest dose below.
 
-```{r mean plots, echo=FALSE, fig.cap="Figure 2: Mean Plots of BC Level Stratified by Dosage Level (mg/day)", out.width = '50%'}
+```{r mean plots, echo=FALSE, fig.cap="Mean Plots Comparing Various Doseage Levels"}
 knitr::include_graphics("meanplots.png")
 ```
 
 ```{r table dose outputs}
 table <- dget("output2")
 kable <- kable(table, format="latex", booktabs=T, align='c', 
-               caption = "Table 2: Output from GEE Dose-Dependent Model")
-kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
+               caption = "Output from GEE Dose-Dependent Model")
+kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F, font_size = 7)
 ```
 
 Table 2 shows the output from our model, which will answer our first question about dose-dependency. $\widehat{\beta_1} + \widehat{\beta_4} = 122.46$ ug/mL is the estimated relative difference in the trajectory of serum BC comparing two subpopulations of patients who differ in dosage by 15 ug/mL with similar baseline serum BC (95% CI: [54.23, 190.69] ug/mL). The higher the dosage that a patient receives, the larger their increase of serum BC over time. We have strong evidence to reject our null hypothesis. Our results support our observations from the EDA in Figure 2.
@@ -97,8 +98,8 @@ Table 2 shows the output from our model, which will answer our first question ab
 ```{r table post-dose outputs}
 table <- dget("output3")
 kable <- kable(table, format="latex", booktabs=T, align='c', 
-               caption = "Table 3: Output from GEE Dose-Dependent Model Post-Treatment")
-kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
+               caption = "Output from GEE Dose-Dependent Model Post-Treatment")
+kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F, font_size = 7)
 ```
 
 Table 3 shows the output from our model, which will answer our second question about dose-dependency. Our suspicions were support by the results. $\widehat{\beta_4} = 11.38$ is statistically insignificant, which tells us that all patients have the same estimated rate of decrease in serum BC levels post-treatment.
@@ -118,28 +119,28 @@ For cholesterol, our conclusions for both models, treating cholesterol as a cate
 ```{r cov output}
 table <- dget("cov.output")
 kable <- kable(table, format="latex", booktabs=T, align='c', 
-               caption = "Table 4: Model Outputs of the Effects of Various Covariates on Impact of BC Supplementation on Serum BC Levels over Time")
-kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
+               caption = "Model Outputs of the Effects of Various Covariates on Impact of BC Supplementation on Serum BC Levels over Time")
+kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F, font_size = 7)
 ```
 
 ```{r cov2 output}
 table <- dget("cov2.output")
 kable <- kable(table, format="latex", booktabs=T, align='c', 
-               caption = "Table 5: Model Outputs of the Effects of Various Categorical Covariates on Impact of BC Supplementation on Serum BC Levels over Time")
-kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
+               caption = "Model Outputs of the Effects of Various Categorical Covariates on Impact of BC Supplementation on Serum BC Levels over Time")
+kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F, font_size = 7)
 ```
 
 Another big secondary question of interest is whether BC supplementation has an effect on serum vitamin E levels during and after treatment. Figure 3 shows us that serum vitamin E Levels appear to be similar to serum BC levels in trends during the Treatment Phase. However, there seems to be a substantial decrease below the mean levels of the placebo group. This is definitely different than how serum BC levels behave post-treatment. Figure 3 also contains a spaghetti plot that shows a slight increase in vitamin E levels in most subjects after month 14. There is not enough data here to explore than phenomena further. If we were to continue follow up visits with the treated patients after month 15, maybe there trends move back towards the normal levels of vitamin E demonstrated by the placebo group.
 
-```{r pairs plot, echo=FALSE, fig.cap="Figure 3: Mean and Spaghetti Plots of Serum Vitamin E Levels Adjusted for Treatment", out.width = '50%', out.height='50%'}
+```{r mean and spag plots, echo=FALSE, fig.cap="Mean and Spaghetti Plots of Serum Vitamin E Levels Adjusted for Treatment"}
 knitr::include_graphics("vite.png")
 ```
 
 ```{r vite table}
 table <- dget("vite table")
 kable <- kable(table, format="latex", booktabs=T, align='c', 
-               caption = "Table 6: Model Outputs of the Effects BC Supplementation on Serum Vitamin E Levels over Time")
-kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
+               caption = "Model Outputs of the Effects BC Supplementation on Serum Vitamin E Levels over Time")
+kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F, font_size = 7)
 ```
 
 The variogram (Appendix A) for serum vitamin E levels eluded to an exchangeable covariance structure. Here we fit two models: one for Treatment phase and one for Post-Treatment phase. Table 6 contains our results from both models. Our results agree with what we saw in the EDA. We estimate the mean difference in serum vitamin E levels between treated patients and placebo-treated patients is $0.528$ ug/mL (95% CI: [0.201,0.855]) during the Treatment phase and 4.53 ug/mL (95% CI: [2.83, 6.22]) during the Post-Treatment phase. There is no statistically significant difference in trajectory during the Treatment Phase. However, in the Post-Treatment phase, we estimate that difference in rate of serum vitamin E levels decreases by $0.473$ ug/mL for every 1 month increase among treated patients compared to placebo-treated patients with similar baseline serum vitamin E level pre-treatment (95% CI: [-0.620, -0.327] ug/mL).
@@ -150,14 +151,18 @@ Lastly, we created a predictive model. Recall our mean linear mixed effects mode
 table <- dget("jagstable")[c(1:6,9,10),]
 row.names(table) <- c("Tx", "Male", "Cholesterol", "Mc.Base", "Tx:Month", "Intercept", "sd(b0)", "sd(b1)")
 kable <- kable(table, format="latex", booktabs=T, align='c', 
-               caption = "Table 7: Jags Output from Predictive Model")
-kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
+               caption = "Jags Output from Predictive Model")
+kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F, font_size = 7)
 ```
 
-```{r pred plots, echo=FALSE, fig.cap="Figure 4: Prediction Plots for Two Randomly Chosen Patients in Each Dose Level", out.width = '50%', out.width='50%'}
+```{r pred plots, echo=FALSE, fig.cap="Prediction Plots for Two Randomly Chosen Patients in Each Dose Level"}
 knitr::include_graphics("predplots.png")
+```
+
+```{r pred plots 2, echo=FALSE, fig.cap="Prediction Plots for Two Randomly Chosen Patients in Each Dose Level"}
 knitr::include_graphics("predplots2.png")
 ```
+
 
 # Discussion
 
@@ -173,49 +178,46 @@ tablePatient31 <- dget("patient31")
 colnames(tablePatient31) <- c("Obs.", "Patient ID", "Month", "BC", "Dosage", "Tx", "Baseline BC")
 row.names(tablePatient31) <- NULL
 kable <- kable(tablePatient31, format="latex", booktabs=T, align='c', 
-               caption = "Table 8: Patient 31 Missing Value Replaced with Average (968.4 ug/mL)")
-kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
+               caption = "Patient 31 Missing Value Replaced with Average (968.4 ug/mL)")
+kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F, font_size = 7)
 ```
 
-```{r variograms, echo=FALSE, fig.cap="Figure 5: Variograms", out.width = '50%', out.height='50%'}
+```{r variograms, echo=FALSE, fig.cap="Variograms"}
 knitr::include_graphics("var.png")
 knitr::include_graphics("var2.png")
 knitr::include_graphics("var3.png")
 ```
 
-```{r pairs plot, echo=FALSE, fig.cap="Figure 6: Empirical Correlation Matrix during Treatment Phase", out.width = '50%', out.height='50%'}
+```{r pairs plot, echo=FALSE, fig.cap="Empirical Correlation Matrix during Treatment Phase"}
 knitr::include_graphics("pairs.png")
 ```
 
-```{r pairs plot2, echo=FALSE, fig.cap="Figure 7: Empirical Correlation Matrix during Post-Treatment Phase for Patients Having Received Treatment", out.width = '50%', out.height='50%'}
+```{r pairs plot2, echo=FALSE, fig.cap="Empirical Correlation Matrix during Post-Treatment Phase for Patients Having Received Treatment"}
 knitr::include_graphics("pairs2.png")
 ```
 
-```{r pairs plot, echo=FALSE, fig.cap="Figure 8: Subject-Specific Random Effects During Treatment Phase", out.width = '50%', out.height='50%'}
+```{r pairs plot 3, echo=FALSE, fig.cap="Subject-Specific Random Effects During Treatment Phase"}
 knitr::include_graphics("randeffplot.jpg")
 ```
 
-```{r res plot, echo=FALSE, fig.cap="Figure 9: Residual vs. Fitted Value Plots of Main Model", out.width = '50%', out.width='50%'}
+```{r res plot, echo=FALSE, fig.cap="Residual Plots"}
 knitr::include_graphics("resplots.png")
-```
-
-```{r res plot2, echo=FALSE, fig.cap="Figure 10: Residual vs. Fitted Value Plots of Dose-Dependent Model", out.width = '50%', out.width='50%'}
 knitr::include_graphics("doseresplot.png")
 ```
 
-```{r bmi plot, echo=FALSE, fig.cap="Figure 11: Scatterplot between BMI and Average BC Levels Stratified by Gender (Pre-Treatment)", out.width = '100%'}
+```{r bmi plot, echo=FALSE, fig.cap="Association Between BMI and Average Serum BC Levels"}
 knitr::include_graphics("bmi.png")
 ```
 
-```{r covariates plots, echo=FALSE, fig.cap="Figure 12: Mean Plots of Serum BC Levels vs. Various Covariates (Treatment)", out.width = '50%', out.width='50%'}
+```{r covariates plots 2, fig.cap="Mean Plots by Gender, Cholesterol, BMI, and Age, Respectively"}
 knitr::include_graphics("covplot1.png")
 knitr::include_graphics("covplots2.png")
 ```
 
-```{r covariates plots, echo=FALSE, fig.cap="Figure 13: Spaghetti Plots (by Cholesterol, BMI, and Age Categories, respectively)", out.width = '50%', out.width='50%'}
-knitr::include_graphics("cholspag.png")
-knitr::include_graphics("bmispag.png")
-knitr::include_graphics("agespag.png")
+```{r fig.cap="Spaghetti Plots by Cholesterol, BMI, and Age Categories, Respectively"}
+knitr::include_graphics("cholspag.jpg")
+knitr::include_graphics("bmispag.jpg")
+knitr::include_graphics("agespag.jpg")
 ```
 
 

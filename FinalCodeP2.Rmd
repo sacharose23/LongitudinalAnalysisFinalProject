@@ -270,11 +270,11 @@ abline(h=0)
 
 table <- round(cbind(male.table, chol.table, bmi.table, age.table),3)
 row.names(table) <- c("Intercept", "Mc.Base", "Month", "X", "X:Month")
-colnames(table) <- c("Male Est.", "Male Robust SE", "Chol. Est.", "Chol. Robust SE", "BMI Est.", "BMI Robust SE", "Age Est.", "Age Robust SE")
+colnames(table) <- c("Male Est.", "Male Rob. SE", "Chol. Est.", "Chol. Rob. SE", "BMI Est.", "BMI Rob. SE", "Age Est.", "Age Rob. SE")
 
 table2 <- round(cbind(cholcat.table, bmicat.table, agecat.table),2)
 row.names(table2) <- c("Intercept", "Mc.Base", "Month", "X1", "X2","X3","X1:Month","X2:Month","X3:Month")
-colnames(table2) <- c("Chol.(Cat) Est.", "Chol.(Cat) Robust SE", "BMI (Cat) Est.", "BMI (Cat) Robust SE", "Age (Cat) Est.", "Age (Cat) Robust SE")
+colnames(table2) <- c("Chol. Est.", "Chol. Robust SE", "BMI  Est.", "BMI Robust SE", "Age Est.", "Age  Robust SE")
 
 dput(table, "cov.output")
 dput(table2, "cov2.output")

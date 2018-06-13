@@ -1,0 +1,43 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set( echo = F, message = FALSE, warning = FALSE, out.width = "80%", fig.align = "center")
+# --
+# data visualization
+library(ggplot2) 
+library(GGally)
+library(gridExtra)
+library(knitr)
+library(kableExtra)
+library(png)
+library(jpeg)
+# --
+library(tidyverse) # data science package
+library(MASS) # for glm.nb and other functions and datasets
+library(survival) # survival analysis package
+library(splines) # for ns function
+library(gee) # generalized estimation equation solver
+library(nlme) # for linear mixed effects models
+library(MCMCpack)
+library(rjags)
+library(rmeta) # forestplots
+# --
+source("https://www.ics.uci.edu/~dgillen/STAT212/Handouts/Stat212Functions.R")
+# --
+# Extras
+library(latex2exp) # math expressions in plots
+library( mvtnorm ) # in order to use rmvnorm
+```
+```{r cov output, fig.width=6}
+table <- dget("cov.output")
+kable <- kable(table, format="latex", booktabs=T, align='c', 
+               caption = "Model Outputs of the Effects of Various Covariates on Impact of BC Supplementation on Serum BC Levels over Time")
+kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F, font_size = 7)
+```
+
