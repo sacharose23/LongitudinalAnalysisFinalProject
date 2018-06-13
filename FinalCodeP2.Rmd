@@ -1,5 +1,5 @@
 ---
-title: "FinalPart2"
+title: "Final Code Part 2"
 author: "Sacha Robbins"
 date: "June 10, 2018"
 output: pdf_document
@@ -35,7 +35,6 @@ library(leaps) # helpful for prediction modeling
 
 ```{r load data}
 bc <- read.csv("https://www.ics.uci.edu/~dgillen/STAT212/Data/bcarotene_212final2018.csv", header = TRUE)
-attach(bc)
 ```
 
 
@@ -64,8 +63,11 @@ ggplot() +
   geom_point(data = bc.sub, aes(x=age, y=aver.bcarot, color=factor(male)), alpha = 0.6)
 # doesn't seem to be correlation b/w age and average beta-carotene & even when stratified by gender
 
-ggplot() +
-  geom_point(data = bc.sub, aes(x=bmi, y=aver.bcarot, color=factor(male)), alpha = 0.6)
+bmi.plot <- ggplot() +
+  geom_point(data = bc.sub, aes(x=bmi, y=aver.bcarot, color=factor(male)), alpha = 0.8) + 
+  labs( x = "Body Mass Index (BMI)", y = "Average Baseline BC Levels", color = "Male \n")
+ggsave("bmi.png", bmi.plot)
+
 # there seems to be negative correlation b/w bmi and average beta-carotene! higher BMI --> lower average bc
 # seems consistent across gender
 
@@ -73,7 +75,6 @@ ggplot() +
   geom_point(data = bc.sub, aes(x=chol, y=aver.bcarot, color=factor(male)), alpha = 0.6)
 # no clear association b/w chol and average bc even when stratified by gender
 ```
-
 
 ```{r EDA of time-invariant covariates during treatment}
 
@@ -89,7 +90,7 @@ bc.base <- bc.sub %>%
 bc.base <- as.data.frame(bc.base)
 
 # insert baseline measurement in place of bcarot for month "0" 
-n.obs <- unlist( l( split( bc.sub$ptid, bc.sub$ptid ), length ) )
+n.obs <- unlist( lapply( split( bc.sub$ptid, bc.sub$ptid ), length ) )
 u.id <- unique(bc.sub$ptid)
 
 bc.sub$base <- rep(0, nrow(bc.sub))
@@ -115,16 +116,6 @@ bc.sub[which(is.na(bc.sub$bcarot)),"bcarot"] <- mean(as.numeric(temp$bcarot), na
 
 # _____________________________________________
 
-# GENDER (MALE) 
-
-ggplot() + 
-  geom_point(data = bc.sub %>% filter(male == 1), aes(x=month, y=bcarot), color = "blue", alpha = 0.7) + 
-  geom_smooth(data = bc.sub %>% filter(male == 1), aes(x=month, y=bcarot), color = "blue") +
-  geom_point(data = bc.sub %>% filter(male == 0), aes(x=month, y=bcarot), color = "pink", alpha = 0.7) + 
-  geom_smooth(data = bc.sub %>% filter(male == 0), aes(x=month, y=bcarot), color = "pink") 
-
-# _____________________________________________
-
 # AGE 
 cutoffs <- summary(bc.sub$age)[c(2,4,5)]
 bc.sub$agecat <- rep( 0, nrow(bc.sub) )
@@ -135,12 +126,7 @@ for( i in 1:3 ){
 library(nlme)
 bc.sub$agecat <- as.factor( bc.sub$agecat )
 BCgrouped <- groupedData( bcarot ~ month | ptid, outer = ~ agecat, 
-			data = bc.sub, labels = list( x = "months", y = "bcarot" ) )
-plot( BCgrouped, outer = ~ agecat, aspect=1, key=FALSE )
-
-ggplot(bc.sub) +
-  geom_point(aes(x=month, y=bcarot, color=agecat)) + 
-  geom_smooth(aes(x=month, y=bcarot, color=agecat), se=F)
+			data = bc.sub, labels = list(x = "Months", y = "Serum BC Levels", title = "title" ) )
 
 # _____________________________________________
 
@@ -154,12 +140,7 @@ for( i in 1:3 ){
 library(nlme)
 bc.sub$bmicat <- as.factor( bc.sub$bmicat )
 BCgrouped <- groupedData( bcarot ~ month | ptid, outer = ~ bmicat, 
-			data = bc.sub, labels = list( x = "months", y = "bcarot" ) )
-plot( BCgrouped, outer = ~ bmicat, aspect=1, key=FALSE )
-
-ggplot(bc.sub) +
-  geom_point(aes(x=month, y=bcarot, color=bmicat)) + 
-  geom_smooth(aes(x=month, y=bcarot, color=bmicat), se=F)
+			data = bc.sub, labels = list( x = "Months", y = "Serum BC Levels") )
 
 # _____________________________________________
 
@@ -174,11 +155,47 @@ library(nlme)
 bc.sub$cholcat <- as.factor( bc.sub$cholcat )
 BCgrouped <- groupedData( bcarot ~ month | ptid, outer = ~ cholcat, 
 			data = bc.sub, labels = list( x = "months", y = "bcarot" ) )
-plot( BCgrouped, outer = ~ cholcat, aspect=1, key=FALSE )
+# _____________________________________________
 
-ggplot(bc.sub) +
+path <- "~/Desktop/212/Final/"
+jpeg( file=paste( path, "bmispag.jpg", sep="" ))
+plot( BCgrouped, outer = ~ bmicat, aspect=2, key=FALSE )
+dev.off()
+
+path <- "~/Desktop/212/Final/"
+jpeg( file=paste( path, "agespag.jpg", sep="" ))
+plot( BCgrouped, outer = ~ agecat, aspect=2, key=FALSE )
+dev.off()
+
+path <- "~/Desktop/212/Final/"
+jpeg( file=paste( path, "cholspag.jpg", sep="" ))
+plot( BCgrouped, outer = ~ cholcat, aspect=2, key=FALSE )
+dev.off()
+
+# _____________________________________________
+
+p.male <- ggplot() + 
+  geom_point(data = bc.sub %>% filter(male == 1), aes(x=month, y=bcarot), color = "blue", alpha = 0.7) + 
+  geom_smooth(data = bc.sub %>% filter(male == 1), aes(x=month, y=bcarot), color = "blue") +
+  geom_point(data = bc.sub %>% filter(male == 0), aes(x=month, y=bcarot), color = "orange", alpha = 0.7) + 
+  geom_smooth(data = bc.sub %>% filter(male == 0), aes(x=month, y=bcarot), color = "orange") + xlab("Month") + ylab("Serum BC Levels") + geom_text(aes(x=8, y=2250), color="orange", label = "Females") + geom_text(aes(x=8, y=2000), color="blue", label = "Males")
+
+p.chol <- ggplot(bc.sub) +
   geom_point(aes(x=month, y=bcarot, color=cholcat)) + 
-  geom_smooth(aes(x=month, y=bcarot, color=cholcat), se=F)
+  geom_smooth(aes(x=month, y=bcarot, color=cholcat), se=F) + 
+  labs( x = "Month", y = "Serum BC Levels", color = "Cholesterol \n Category \n")
+
+p.bmi <- ggplot(bc.sub) +
+  geom_point(aes(x=month, y=bcarot, color=bmicat)) + 
+  geom_smooth(aes(x=month, y=bcarot, color=bmicat), se=F) + 
+  labs( x = "Month", y = "Serum BC Levels", color = "BMI \n Category \n")
+
+p.age <- ggplot(bc.sub) +
+  geom_point(aes(x=month, y=bcarot, color=agecat)) + 
+  geom_smooth(aes(x=month, y=bcarot, color=agecat), se=F) + 
+  labs( x = "Month", y = "Serum BC Levels", color = "Age \n Category \n")
+
+ggsave("covplots.png", arrangeGrob(p.male, p.chol, p.bmi, p.age))
 
 # OBSERVATIONS
 # It may be true that lower chol --> lower bcarot
@@ -199,7 +216,7 @@ for(i in 1:nrow(bc.sub)){
 }
 
 # check nobs per subject
-n.obs <- unlist( l( split( bc.sub$ptid, bc.sub$ptid ), length ) )
+n.obs <- unlist( lapply( split( bc.sub$ptid, bc.sub$ptid ), length ) )
 table(n.obs)
 # get rid of subject 44 with < 3 obs
 bc.sub <- bc.sub %>% filter(ptid != 44)
@@ -210,86 +227,57 @@ bc.sub$mc.base <- bc.sub$base - mean(bc.sub$base)
 
 # fit the model for male
 fit.male <- gee(bcarot ~ mc.base + month*male, id = ptid, data = bc.sub, corstr = "exchangeable")
-summary(fit.male)$coeff
+male.table <- summary(fit.male)$coeff[,c(1,4)]
 plot(fit.male$fitted, fit.male$residuals, main="Residuals vs. Fitted Values")
 abline(h=0)
 
 # fit the model for agecat
 fit.agecat <- gee(bcarot ~ mc.base + month*agecat, id = ptid, data = bc.sub, corstr = "exchangeable")
-summary(fit.agecat)$coeff
+agecat.table <- summary(fit.agecat)$coeff[,c(1,4)]
 plot(fit.agecat$fitted, fit.agecat$residuals, main="Residuals vs. Fitted Values")
 abline(h=0)
 
 # fit the model for age (cts)
 fit.age <- gee(bcarot ~ mc.base + month*age, id = ptid, data = bc.sub, corstr = "exchangeable")
-summary(fit.age)$coeff
+age.table <- summary(fit.age)$coeff[,c(1,4)]
 plot(fit.age$fitted, fit.age$residuals, main="Residuals vs. Fitted Values")
 abline(h=0)
 
 # fit the model for bmicat
 fit.bmicat <- gee(bcarot ~ mc.base + month*bmicat, id = ptid, data = bc.sub, corstr = "exchangeable")
-summary(fit.bmicat)$coeff
+bmicat.table <- summary(fit.bmicat)$coeff[,c(1,4)]
 plot(fit.bmicat$fitted, fit.bmicat$residuals, main="Residuals vs. Fitted Values")
 abline(h=0)
 
 # fit the model for bmi (cts)
 fit.bmi <- gee(bcarot ~ mc.base + month*bmi, id = ptid, data = bc.sub, corstr = "exchangeable")
-summary(fit.bmi)$coeff
+bmi.table <- summary(fit.bmi)$coeff[,c(1,4)]
 plot(fit.bmi$fitted, fit.bmi$residuals, main="Residuals vs. Fitted Values")
 abline(h=0)
 
 # fit the model for cholcat
 fit.cholcat <- gee(bcarot ~ mc.base + month*cholcat, id = ptid, data = bc.sub, corstr = "exchangeable")
-summary(fit.cholcat)$coeff
+cholcat.table <- summary(fit.cholcat)$coeff[,c(1,4)]
 plot(fit.cholcat$fitted, fit.cholcat$residuals, main="Residuals vs. Fitted Values")
 abline(h=0)
 
 # fit the model for chol (cts)
 fit.chol <- gee(bcarot ~ mc.base + month*I(chol/50), id = ptid, data = bc.sub, corstr = "exchangeable")
-summary(fit.chol)$coeff
+chol.table <- summary(fit.chol)$coeff[,c(1,4)]
 plot(fit.chol$fitted, fit.chol$residuals, main="Residuals vs. Fitted Values")
 abline(h=0)
+
+table <- round(cbind(male.table, chol.table, bmi.table, age.table),3)
+row.names(table) <- c("Intercept", "Mc.Base", "Month", "X", "X:Month")
+colnames(table) <- c("Male Est.", "Male Robust SE", "Chol. Est.", "Chol. Robust SE", "BMI Est.", "BMI Robust SE", "Age Est.", "Age Robust SE")
+
+table2 <- round(cbind(cholcat.table, bmicat.table, agecat.table),2)
+row.names(table2) <- c("Intercept", "Mc.Base", "Month", "X1", "X2","X3","X1:Month","X2:Month","X3:Month")
+colnames(table2) <- c("Chol.(Cat) Est.", "Chol.(Cat) Robust SE", "BMI (Cat) Est.", "BMI (Cat) Robust SE", "Age (Cat) Est.", "Age (Cat) Robust SE")
+
+dput(table, "cov.output")
+dput(table2, "cov2.output")
 ```
-
-## Gender
-Null hypothesis is that there is no difference by age in the effect of BC supplementation on serum BC levels over time. Based on our EDA before the treatment, females seemed to have higher BC levels than males. So, it's not too surprising that our model shows males and females having different intercepts; however, we have evidence that supports similar trajectories of BC levels over time between male and female during treatment.
-
-We estimate that males have 148.53 ug/mL lower mean difference in BC levels over time during the treatment than females with similar baseline BC measures (95% confidence interval [-288.94,-8.11]). 
-
-## Age
-
-We fit two models analyzing age as a possible covariate in the effect of BC supplementation on serum BC levels over time: age as a categorical variable and age as a continuous variable. 
-Our null hypothesis is that there is no difference by age in the effect of BC supplementation on serum BC levels over time. Based on our EDA before the treatment, there was weak suspicion of older patients associated with high serum BC levels. So, it's not too surprising that our models show evidence supporting the null; our 95% confidence intervals for our estimates cooresponding to age and the interaction betweenn age and time failed to reject the null.
-
-## BMI
-
-Our models that investigated the effect of baseline BMI on the impact of BC supplementation on serum BC levels over time were similar to what we did for age. 
-
-Our null hypothesis for BMI is that there is no difference by BMI in the effect of BC supplementation on serum BC levels over time. Based on our EDA before the treatment, there was moderate suspicion of lower BMI patients associated with high serum BC levels. 
-
-Our conclusions seem to differ depending on if we treat BMI as a categorical variable or a continuous variable. As a continuous variable, BMI does not seem to be a change in the effect of BC supplementation on serum BC levels over time. But, as a categorical variable, the increase of BMI changes the mean serum BC levels, but not the slopes over time. 
-
-[ Interpret all betas or display with table ]
-
-* there isn't a relationship between BMI and cholesterol
-
-```{r}
-ggplot(bc.sub) + 
-  geom_point(aes(x=chol, y=bmi))
-```
-
-
-## Cholesterol
-
-Our models that investigated the effect of baseline cholesterol on the impact of BC supplementation on serum BC levels over time were similar to what we did for age. 
-
-Our null hypothesis for cholesterol is that there is no difference by cholesterol in the effect of BC supplementation on serum BC levels over time. Based on our EDA before the treatment, there was moderate suspicion of high cholesterol patients associated with high serum BC levels. 
-
-Our conclusions for both models, treating cholesterol as a categorical variable and then as a continuous variable, are similar. Both support a difference in intercepts, but not a difference in trajectories. 
-
-There is strong evidence for a positive correlation between cholesterol and serum BC levels. We estimate that the mean difference in BC levels over time during the treatment comparing two subpopulations that differ in cholesterol by 50 mg/dL with similar baseline BC measures is 133.52 ug/mL (95% confidence interval [68.61, 198.43]). 
-
-[ Interpret all betas or display with table ]
 
 # Question 3 - Quantify the effect of bc supplementation and impact of stopping bc supplementation on serum vit E levels over time
 
@@ -311,7 +299,7 @@ bc.base <- bc.sub %>%
 bc.base <- as.data.frame(bc.base)
 
 # insert baseline measurement in place of vite for month "0" 
-n.obs <- unlist( l( split( bc.sub$ptid, bc.sub$ptid ), length ) )
+n.obs <- unlist( lapply( split( bc.sub$ptid, bc.sub$ptid ), length ) )
 u.id <- unique(bc.sub$ptid)
 
 bc.sub$base <- rep(0, nrow(bc.sub))
@@ -341,22 +329,21 @@ bc.sub <- bc.sub %>% filter(month > 3)
 
 ```{r first model EDA}
 # Mean plot of Vite Response over months 4-15 stratified by treatment
-ggplot(bc.sub) +
+p1 <- ggplot(bc.sub) +
   geom_point(aes(x=month, y=vite, color = factor(factor.dose)), alpha = 0.6) +
-  geom_smooth(aes(x=month, y=vite, color = factor(factor.dose)), alpha = 0.6, se=F) + geom_vline(xintercept = 9)
+  geom_smooth(aes(x=month, y=vite, color = factor(factor.dose)), alpha = 0.6, se=F) + 
+  geom_vline(xintercept = 9) +
+  labs( x = "Month", y = "Serum Vitamin E Levels", color = "Tx \n")
 
 # Spaghetti Plot of Vite Response over months 4-15 stratified by treatment
-ggplot() +
-  geom_line(data=bc.sub %>% filter(factor.dose == 0), aes(x=month, y=vite, group=ptid), color="red", alpha = 0.6) + 
-  geom_line(data=bc.sub %>% filter(factor.dose == 1), aes(x=month, y=vite, group=ptid), color="blue", alpha = 0.5) + geom_vline(xintercept = 9, color = "darkgrey")
+p2 <- ggplot() +
+  geom_line(data=bc.sub %>% filter(factor.dose == 0), aes(x=month, y=vite, group=ptid), color="orangered1", alpha = 0.6) + 
+  geom_line(data=bc.sub %>% filter(factor.dose == 1), aes(x=month, y=vite, group=ptid), color="violet", alpha = 0.5) + geom_vline(xintercept = 9, color = "darkgrey") +
+  labs( x = "Month", y = "Serum Vitamin E Levels", color = "Tx \n") + 
+  geom_text(aes(x=6, y=5), color="orangered1", label = "Placebo Group") +
+  geom_text(aes(x=6, y=12.5), color="violet", label = "Treatment Group")
 
-# CONCLUSIONS
-# Vitamin E levels in the placebo group seem constant over this time period
-# Vit E levels in treatment group seem to increase during treatment period and then 
-# decrease substantially after (average being below that of the placebo group)
-# Spaghetti plots shows a little bit of an increase in Vit E for treatment group after month 14
-# it's an interesting note, but there is not enough data to understand the change at month 14
-# maybe the Vit E levels are trending back to levels similar to the placebo group ("normal levels")
+ggsave("vite.png", arrangeGrob(p1, p2))
 
 sapply(bc.sub, function(x) sum(is.na(x)))
 bc.sub[which(is.na(bc.sub$vite)),]
@@ -378,10 +365,13 @@ out <- lda.variogram( id=temp.bc$ptid, y=resids, x=temp.bc$month )
 dr <- out$delta.y
 dt <- out$delta.x
 var.est <- var( resids, na.rm = T )
-plot( dt, dr, pch=".", ylim=c(0, 1.2*var.est) )
-lines( smooth.spline( dt, dr, df=5 ), lwd=3 )
-abline( h=var.est, lty=2, lwd=2 )
-title("Plasma Beta-carotene Levels from Month 4-9 - Residual Variogram")
+
+variogram <- ggplot() +
+  geom_point(aes(x=dt, y=dr), pch = ".") + 
+  geom_smooth(aes(x=dt, y=dr)) + ylim(0, 1.2*var.est) + geom_hline(yintercept=var.est) + 
+  ggtitle("Variogram of Plasma Vitman E Levels during Treatment Phase") + xlab("Delta Time") + ylab("Delta Residuals")
+
+ggsave("var3.png", variogram)
 
 # There doesn't seem to be much of a serial process; everything points to exchangeable covariance structure.
 ```
@@ -397,7 +387,7 @@ plot( intervals( indiv.lm ) )
 
 ```{r first model fit a model}
 # check nobs per subject
-n.obs <- unlist( l( split( bc.sub$ptid, bc.sub$ptid ), length ) )
+n.obs <- unlist( lapply( split( bc.sub$ptid, bc.sub$ptid ), length ) )
 table(n.obs)
 # get rid of subject 44 with < 3 obs
 bc.sub <- bc.sub %>% filter(ptid != 44)
@@ -409,21 +399,20 @@ bc.sub$mc.base <- bc.sub$base - mean(bc.sub$base)
 
 # DURING TREATMENT
 fit <- gee(vite ~  factor.dose + mc.base + month + month*factor.dose, id = ptid, data = bc.sub %>% filter(month <10), corstr = "exchangeable")
-summary(fit)$coeff
+out1 <- summary(fit)$coeff[,c(1,4)]
 plot(fit$fitted, fit$residuals, main="Residuals vs. Fitted Values")
 abline(h=0)
-
-# no significant difference in trajectory between those in treatment and those in placebo during months 4-9
-# there is a significant difference in mean vite e during months 4-9 b/w placebo and tx groups
 
 # POST TREATMENT
 fit <- gee(vite ~  factor.dose + mc.base + month + month*factor.dose, id = ptid, data = bc.sub %>% filter(month > 9), corstr = "exchangeable")
-summary(fit)$coeff
+out2 <- summary(fit)$coeff[,c(1,4)]
 plot(fit$fitted, fit$residuals, main="Residuals vs. Fitted Values")
 abline(h=0)
 
-# there is a significant difference in trajectories between those in treatment and those in placebo during months 10-15 as suspected! no surprises there
-# there is a significant difference in mean vite e during months 10-15 b/w placebo and tx groups
+table <- cbind(out1[,1],out2[,1],out1[,2],out2[,2])
+row.names(table) <- c("Intercept", "Tx", "Mc.Base", "Month", "Tx:Month")
+colnames(table) <- c("Tx Phase \n Estimates", "Post-Tx Phase \n Estimates", "Tx Phase \n Robust SE", "Post-Tx Phase \n Robust SE")
+dput(table, "vite table")
 ```
 
 

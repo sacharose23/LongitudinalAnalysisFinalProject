@@ -34,7 +34,6 @@ library( mvtnorm ) # in order to use rmvnorm
 
 ```{r load data}
 bc <- read.csv("https://www.ics.uci.edu/~dgillen/STAT212/Data/bcarotene_212final2018.csv", header = TRUE)
-attach(bc)
 ```
 
 # Abstract
@@ -57,86 +56,133 @@ $Y_{ij}= \beta_0+\beta_1Tx_i+\beta_2mc.base_{i}+\beta_3month_{ij} + \beta_4Tx_i*
 To investigate whether the impact of BC supplementation on serum BC levels over time was dose-dependent, we focused on Treatment Phase and only those who received supplementation. Our mean model here was $E[Y_{ij}]=\beta_0+\beta_1(dose_i/15)+\beta_2mc.base_i+\beta_3t_{ij}+\beta_4t_{ij}(dose_i/15)$. Instead of an indicator variable for treatment, we tranformed dose by dividing by 15 for better interpretability. 
 
 
-To build the predictive model, we used Bayesian Inference for linear mixed effects (LME) model. Here, we were able to place non-informative priors and through Gibbs sampling technique able to draw from the posterior distribution of the parameters. From there, we were able to obtain marginal estimates as well as subject-specific random intercepts and slopes. Our covariance matrix for our random effects was assumed to folow an inverse Wishart distribution. Here, we ignored vitamin E levels, BMI, and age based on our exploration of these covariates and their effect on the impact that supplementation had on serum BC levels. Here is our mean model: $$E[Y_{ij}|\vec{b_i}] = \beta_0 + \beta_{C1}Tx_i + \beta_{C2}Male_i + \beta_{C3}Chol_i + \beta_{C4}base_i + \beta_{L1}month_{ij} + \beta_{L2}Tx_i\cdot month_{ij}$$. Implementation of the model was conducted using 'rjags' package version 4-6.
-
-
 # Results
 
+Recall our mean model fitted in order to investigate the impact of BC supplementation on serum BC levels over time: $E[Y_{ij}]= \beta_0+\beta_1Tx_i+\beta_2mc.base_{i}+\beta_3month_{ij} + \beta_4Tx_i*month_{ij}$. If $\beta_1=0$ and $\beta_4=0$, the longitudinal model would be the same regardless of what type of treatment a patient receives. Figure 1 visually shows some support against these null hypotheses as well as the potential influence of Patient 57.
 
-If $\beta_1=0$ and $\beta_4=0$, the impact of supplementation on serum beta-carotene would be the same regardless of what type of treatment a patient receives. In other words, treatment has no effect on the relationship between supplementation on serum beta-carotene over time. 
-
-Our models gives us strong evidence against these null hypotheses. 
-
-$\widehat{\beta_1}=823.09$ is the estimated relative difference in mean serum beta-carotene comparing patients in treatment group with patients in placebo group at the start of the treatment phase ($t_{ij}=0$ i.e. end of month 3 (95% confidence interval using robust standard error: [598.18, 1048.00] ug/mL). 
-
-$\widehat{\beta_4} + \widehat{\beta_3} = 17.89$ ug/mL is the estimated relative change in serum beta-carotene for every 1 month increase in time among patients who start the trial with similar baseline serum beta-carotene and receive supplementation (95% confidence interval using robust standard error: [-33.48, 69.25] ug/mL). 
-
-There doesn't seem to be strong evidence to reject $H_0:\beta_3=0$. This is not too surprising since our EDA showed serum beta-carotene levels of placebo group patients to be constant through time. 
-
-If we take $\beta_3=0$, then our previous estimate changes to $38.00$ ug/mL with 95% confidence interval [11.45, 64.56] ug/mL. 
-
-There is evidence that beta-carotene supplementation impacts serum beta-carotene over time.  
-
-
-Our inference does change without patient 57...
-
-Our estimate for $\beta_1$ increases, which makes sense since patient 57 had similar behavior of serum beta-carotene as those in treatment groups even though they received placebo. 
-
-$\widehat{\beta_1}=1055.52$ is the estimated relative difference in mean serum beta-carotene comparing patients in treatment group with patients in placebo group at the start of the treatment phase ($t_{ij}=0$ i.e. end of month 3 (95% confidence interval using robust standard error: [991.29, 1119.74] ug/mL). 
-
-We also gain more precision in our trajectory estimates. 
-
-$\widehat{\beta_4} + \widehat{\beta_3} = 18.00$ ug/mL is the estimated relative change in serum beta-carotene for every 1 month increase in time among patients who start the trial with similar baseline serum beta-carotene and receive supplementation (95% confidence interval using robust standard error: [4.46, 31.55] ug/mL). 
-
-This time, our estimate for $\beta_3$ and its standard error, leads us to fail to reject $H_0:\beta_3=0$. In general, the EDA supports the null. The model states that the change in serum beta-carotene for every 1 month increase in time among patients who start the trial with similar baseline serum beta-carotene and receive placebo is 6.16 ug/mL (95% confidence interval [2.72, 9.61] ug/mL). This is a very small change in serum beta-carotene over time for the placebo group. We need to remember that our placebo sample only contains 9 patients compared with treatment group that contains 35 patients. So, we can't really trust our inference here in general.
-
-When we eliminate patient 57, we have similar evidence that supports beta-carotene supplementation increases serum beta-carotene levels over time.
+```{r patient 57, echo=FALSE, fig.cap="Figure 1: Histograms and Spaghetti Plots of Serum BC with and without Patient 57", out.width = '100%'}
+knitr::include_graphics("plots.png")
+```
 
 ```{r table outputs}
 table <- dget("output")
 kable <- kable(table, format="latex", booktabs=T, align='c', 
-               caption = "Table #: Output from GEE Model Comparing with and without Patient 57")
+               caption = "Table 1: Output from GEE Model Comparing with and without Patient 57")
 kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
 ```
 
-The next question is if this impact is dose-dependent, is the impact of supplementation on serum beta-carotene over time different across dose levels.
+Table 1 shows the estimates for these regression parameters after fitting models with and without Patient 57. Let's first consider the model with Patient 57. $\widehat{\beta_1}=823.09$ is the estimated relative difference in mean serum BC comparing treated patients with placebo-treated patients with same average baseline BC measures after one month into the Treatment Phase  (95% CI: [598.18, 1048.00] ug/mL). There is strong evidence that BC supplementation does marginally impact serum BC levels. But, our estimate for $\beta_4 + \beta_3$ is insignificant for this model; we don't have strong evidence that suggests different rates of serum BC between treated and placebo-treated patients.
 
-If $\beta_1=0$ and $\beta_4=0$, then all patients would have the same model regardless of their dosage. 
+However, when we eliminate the observations from Patient 57, our inferences change. Our estimate for $\beta_1$ increases to $1055.52$ and the robust standard error decreases so that our new 95% CI is [991.29, 1119.74] ug/mL. This gives us the same conclusion as the previous model, except with more precision and magnitude. The big difference is in our assessment of the trajectories. $\widehat{\beta_4} + \widehat{\beta_3}$ is now significant. We estimate that $18.00$ ug/mL is the relative change in serum BC for every 1 month increase in time among treated patients who start the trial with similar baseline serum BC (95% CI: [4.46, 31.55] ug/mL). In other words, the estimated trajectory of serum BC among treated patients is $11.84$ ug/mL higher than that of placebo-treated patients (95% CI: [1.75, 21.94] ug/mL). Relatively speaking, this is only a slight difference in slope within a six-month period. It's also very important to remember that our sample for placebo-treated patients ($N_P=9$) is very small compared with the treated group ($N_T=35$). So, we must be cautious with our inferences here in general.
 
-$\widehat{\beta_1} + \widehat{\beta_4} = 122.46$ ug/mL is the estimated relative difference in the trajectory of serum beta-carotene comparing two subpopulations of patients who differ in dosage by 15 ug/mL with similar baseline serum beta-carotene (95% confidence interval using robust standard error: [54.23, 190.69] ug/mL). The higher the dosage that a patient receives, the larger their increase of serum beta-carotene over time. We have strong evidence to reject our null hypothesis. Our results support our observations from the previous EDA.
+The next question of interest is if the impact of BC supplementation on serum BC levels over time is dose-dependent, and if so, does the rate at which patients return to baseline after ceasing supplementation also differ by dosage levels. Recall our mean model fitted: $E[Y_{ij}]=\beta_0+\beta_1(dose_i/15)+\beta_2mc.base_i+\beta_3t_{ij}+\beta_4t_{ij}(dose_i/15)$. We will answer both questions with the same model; however, using data from different study phases. For the first part of the question, we focused on the Treatment Phase; for the second part of the question, we focused on the Post-Treatment Phase ($mc.base_i$ will be the mean-centered average of the serum BC levels in the Treatment Phase for the $i^{th}$ patient). In the post-treatment phase, the EDA eluded to an autoregressive-1 working correlation structure. So, unlike the previous models, we fitted the GEE post-treatment model using an AR-1 covariance structure. Our residuals plot shows slight funneling as fitted values increase, so we again used robust variance estimates. 
 
+If $\beta_1=0$ and $\beta_4=0$, then all treated patients ($N_T=35$) would have the same model regardless of their dosage level. Again, here we are only focusing on the treated patients, so Patient 57 is of no concern. Our mean plots in Figure 2 shows that dosage level may be influential during the treatment, but the dosage level may not be influential in the decrease to baseline of serum BC levels post-treatment. The post-treatment trajectories seem to stay parallel with one another with highest dose above and lowest dose below.
 
-```{r mean plots, echo=FALSE, fig.cap="Mean Plots of BC Level Stratified by Dosage Level (mg/day)", out.width = '100%'}
+```{r mean plots, echo=FALSE, fig.cap="Figure 2: Mean Plots of BC Level Stratified by Dosage Level (mg/day)", out.width = '50%'}
 knitr::include_graphics("meanplots.png")
 ```
 
 ```{r table dose outputs}
 table <- dget("output2")
 kable <- kable(table, format="latex", booktabs=T, align='c', 
-               caption = "Table #: Output from GEE Dose-Dependent Model")
+               caption = "Table 2: Output from GEE Dose-Dependent Model")
 kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
 ```
+
+Table 2 shows the output from our model, which will answer our first question about dose-dependency. $\widehat{\beta_1} + \widehat{\beta_4} = 122.46$ ug/mL is the estimated relative difference in the trajectory of serum BC comparing two subpopulations of patients who differ in dosage by 15 ug/mL with similar baseline serum BC (95% CI: [54.23, 190.69] ug/mL). The higher the dosage that a patient receives, the larger their increase of serum BC over time. We have strong evidence to reject our null hypothesis. Our results support our observations from the EDA in Figure 2.
 
 ```{r table post-dose outputs}
 table <- dget("output3")
 kable <- kable(table, format="latex", booktabs=T, align='c', 
-               caption = "Table #: Output from GEE Dose-Dependent Model Post-Treatment")
+               caption = "Table 3: Output from GEE Dose-Dependent Model Post-Treatment")
 kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
 ```
 
-Based on our last figure, there does NOT seem to be a difference by dose in the rate at which patients return to baseline after ceasing supplementation. The trajectories seem to stay parallel with one another with highest dose above and lowest dose below.
+Table 3 shows the output from our model, which will answer our second question about dose-dependency. Our suspicions were support by the results. $\widehat{\beta_4} = 11.38$ is statistically insignificant, which tells us that all patients have the same estimated rate of decrease in serum BC levels post-treatment.
 
-To fit our model we need to focus on months 9 to 15 and again only those who receive supplementation. We can fit the same model to answer our scientific question.
+## Secondary Analysis
 
-Our EDA eluded to an autoregressive-1 working correlation structure. So, unlike previous models, we will fit the model using an AR-1 covariance structure. Our residuals plot shows slight funneling as fitted values increase, so we will again use our robust variance estimates. 
+```{r cov output}
+table <- dget("cov.output")
+kable <- kable(table, format="latex", booktabs=T, align='c', 
+               caption = "Table #: Model Outputs of the Effects of Various Covariates on Impact of BC Supplementation on Serum BC Levels over Time")
+kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
+```
 
-$\widehat{\beta_4} = 11.38$ ug/mL is the estimated relative difference in the decreasing trajectories of serum beta-carotene post-treatment comparing two subpopulations of patients who differed in dosage by 15 ug/mL during treatment and similar in baseline serum beta-carotene (95% confidence interval using robust standard error: [-23.31, 0.55] ug/mL). 
+```{r cov2 output}
+table <- dget("cov2.output")
+kable <- kable(table, format="latex", booktabs=T, align='c', 
+               caption = "Table #: Model Outputs of the Effects of Various Categorical Covariates on Impact of BC Supplementation on Serum BC Levels over Time")
+kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
+```
 
-We have evidence to fail to reject our null hypothesis. Our results support our observations from the previous EDA. The trajectories in the decrease of serum beta-carotene seem parallel across dosage levels. 
+### Gender
+Null hypothesis is that there is no difference by age in the effect of BC supplementation on serum BC levels over time. Based on our EDA before the treatment, females seemed to have higher BC levels than males. So, it's not too surprising that our model shows males and females having different intercepts; however, we have evidence that supports similar trajectories of BC levels over time between male and female during treatment.
 
-If we take $\beta_4=0$, then the estimated serum beta-carotene post-treatment across dosage levels is $-153.37$ ug/mL for every one month increase for patients with similar baseline serum beta-carotene (95% confidence interval [-181.80, -124.94] ug/mL).
+We estimate that males have 148.53 ug/mL lower mean difference in BC levels over time during the treatment than females with similar baseline BC measures (95% confidence interval [-288.94,-8.11]). 
+
+### Age
+
+We fit two models analyzing age as a possible covariate in the effect of BC supplementation on serum BC levels over time: age as a categorical variable and age as a continuous variable. 
+Our null hypothesis is that there is no difference by age in the effect of BC supplementation on serum BC levels over time. Based on our EDA before the treatment, there was weak suspicion of older patients associated with high serum BC levels. So, it's not too surprising that our models show evidence supporting the null; our 95% confidence intervals for our estimates cooresponding to age and the interaction betweenn age and time failed to reject the null.
+
+### BMI
+
+Our models that investigated the effect of baseline BMI on the impact of BC supplementation on serum BC levels over time were similar to what we did for age. 
+
+Our null hypothesis for BMI is that there is no difference by BMI in the effect of BC supplementation on serum BC levels over time. Based on our EDA before the treatment, there was moderate suspicion of lower BMI patients associated with high serum BC levels. 
+
+Our conclusions seem to differ depending on if we treat BMI as a categorical variable or a continuous variable. As a continuous variable, BMI does not seem to be a change in the effect of BC supplementation on serum BC levels over time. But, as a categorical variable, the increase of BMI changes the mean serum BC levels, but not the slopes over time. 
+
+### Cholesterol
+
+Our models that investigated the effect of baseline cholesterol on the impact of BC supplementation on serum BC levels over time were similar to what we did for age. 
+
+Our null hypothesis for cholesterol is that there is no difference by cholesterol in the effect of BC supplementation on serum BC levels over time. Based on our EDA before the treatment, there was moderate suspicion of high cholesterol patients associated with high serum BC levels. 
+
+Our conclusions for both models, treating cholesterol as a categorical variable and then as a continuous variable, are similar. Both support a difference in intercepts, but not a difference in trajectories. 
+
+There is strong evidence for a positive correlation between cholesterol and serum BC levels. We estimate that the mean difference in BC levels over time during the treatment comparing two subpopulations that differ in cholesterol by 50 mg/dL with similar baseline BC measures is 133.52 ug/mL (95% confidence interval [68.61, 198.43]). 
 
 
+```{r vite table}
+table <- dget("vite table")
+kable <- kable(table, format="latex", booktabs=T, align='c', 
+               caption = "Table #: Model Outputs of the Effects BC Supplementation on Serum Vitamin E Levels over Time")
+kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
+```
+
+### Vitamin E CONCLUSIONS
+Vitamin E levels in the placebo group seem constant over this time period
+Vit E levels in treatment group seem to increase during treatment period and then
+decrease substantially after (average being below that of the placebo group)
+Spaghetti plots shows a little bit of an increase in Vit E for treatment group after month 14
+it's an interesting note, but there is not enough data to understand the change at month 14
+maybe the Vit E levels are trending back to levels similar to the placebo group ("normal levels")
+
+there is a significant difference in trajectories between those in treatment and those in placebo during months 10-15 as suspected! no surprises there
+there is a significant difference in mean vite e during months 10-15 b/w placebo and tx groups
+
+no significant difference in trajectory between those in treatment and those in placebo during months 4-9
+there is a significant difference in mean vite e during months 4-9 b/w placebo and tx groups
+
+### Prediction Model
+
+To build the predictive model, we used Bayesian Inference for linear mixed effects (LME) model. Here, we were able to place non-informative priors and through Gibbs sampling technique able to draw from the posterior distribution of the parameters. From there, we were able to obtain marginal estimates as well as subject-specific random intercepts and slopes. Our covariance matrix for our random effects was assumed to folow an inverse Wishart distribution. Here, we ignored vitamin E levels, BMI, and age based on our exploration of these covariates and their effect on the impact that supplementation had on serum BC levels. Here is our mean model: $$E[Y_{ij}|\vec{b_i}] = \beta_0 + \beta_{C1}Tx_i + \beta_{C2}Male_i + \beta_{C3}Chol_i + \beta_{C4}base_i + \beta_{L1}month_{ij} + \beta_{L2}Tx_i\cdot month_{ij}$$. Implementation of the model was conducted using 'rjags' package version 4-6.
+
+```{r}
+table <- dget("jagstable")[c(1:6,9,10),]
+row.names(table) <- c("Tx", "Male", "Cholesterol", "Mc.Base", "Tx:Month", "Intercept", "sd(b0)", "sd(b1)")
+kable <- kable(table, format="latex", booktabs=T, align='c', 
+               caption = "Table #: Jags Output from Predictive Model")
+kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
+```
+
+```{r pred plots, echo=FALSE, fig.cap="Prediction Plots for Two Randomly Chosen Patients in Each Dose Level", out.width = '50%', out.width='50%'}
+knitr::include_graphics("predplots.png")
+knitr::include_graphics("predplots2.png")
+```
 
 # Appendix A
 
@@ -149,16 +195,10 @@ kable <- kable(tablePatient31, format="latex", booktabs=T, align='c',
 kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
 ```
 
-```{r patient 57, echo=FALSE, fig.cap="Histograms and Spaghetti Plots of Serum BC with and without Patient 57", out.width = '100%'}
-knitr::include_graphics("plots.png")
-```
-
-```{r variogram, echo=FALSE, fig.cap="", out.width = '50%', out.height='50%'}
+```{r variograms, echo=FALSE, fig.cap="", out.width = '50%', out.height='50%'}
 knitr::include_graphics("var.png")
-```
-
-```{r variogram2, echo=FALSE, fig.cap="", out.width = '50%', out.height='50%'}
 knitr::include_graphics("var2.png")
+knitr::include_graphics("var3.png")
 ```
 
 ```{r pairs plot, echo=FALSE, fig.cap="Empirical Correlation Matrix during Treatment Phase", out.width = '50%', out.height='50%'}
@@ -181,7 +221,19 @@ knitr::include_graphics("resplots.png")
 knitr::include_graphics("doseresplot.png")
 ```
 
+```{r bmi plot, echo=FALSE, fig.cap="Scatterplot between BMI and Average BC Levels Stratified by Gender (Pre-Treatment)", out.width = '100%'}
+knitr::include_graphics("bmi.png")
+```
 
+```{r covariates plots, echo=FALSE, fig.cap="Mean Plots of Serum BC Levels vs. Various Covariates (Treatment)", out.width = '50%', out.width='50%'}
+knitr::include_graphics("covplots.png")
+```
+
+```{r covariates plots, echo=FALSE, fig.cap="Spaghetti Plots (by Cholesterol, BMI, and Age Categories, respectively)", out.width = '50%', out.width='50%'}
+knitr::include_graphics("cholspag.png")
+knitr::include_graphics("bmispag.png")
+knitr::include_graphics("agespag.png")
+```
 
 # Appendix B
 

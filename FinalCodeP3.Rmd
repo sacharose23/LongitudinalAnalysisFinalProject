@@ -35,11 +35,9 @@ library(leaps) # helpful for prediction modeling
 
 ```{r load data}
 bc <- read.csv("https://www.ics.uci.edu/~dgillen/STAT212/Data/bcarotene_212final2018.csv", header = TRUE)
-attach(bc)
 ```
 
 # Question 1 - predictions of serum bc levels for 2 randomly selected patients at each dose level if they were to have stayed on treatment for additional 3 months
-
 
 ```{r clean data}
 # calculate baseline measurement pre-treatment/placebo
@@ -199,7 +197,7 @@ for( i in 1:4 ){
 }
 
 ## 	Plot the densities for the chains for all parameters
-##	Slightly more automated using coda plotting routines		
+##	Slightly more automated using coda plotting routines	
 plot(samps.coda)
 
 ##	Check autocorrelation
@@ -207,6 +205,9 @@ autocorr.plot(samps.coda)
 
 ##### Obtain posterior summary statistics for marginal parameters
 summ.betas <- summary( samps.coda )
+
+table <- summ.betas$statistics[,1:2]
+dput(table, "jagstable")
 ```
 
 ```{r}
@@ -253,15 +254,48 @@ for(i in 1:length(pts)){
   preds[[i]] <- rints[i,1] + rslopes[i,1]*pts.data[[i]][1,5]*(max(pts.data[[i]][,3]) + month) + betas[1,1]*pts.data[[i]][1,5] + betas[2,1]*pts.data[[i]][1,6] + betas[3,1]*pts.data[[i]][1,7] + betas[4,1]*pts.data[[i]][1,8]
 }
 
-months <- 0:8
+Months <- 4:12
 bcarots <- list()
 for(i in 1:length(pts)){
   bcarots[[i]] <- c( (bc.pred %>% filter(ptid == pts[i]))[,4], preds[[i]])
 }
 
-ggplot() + 
-  geom_point(aes(x=months, y=bcarots[[6]]) )
 
+p1 <- ggplot() + 
+  geom_line(aes(x=Months, y=bcarots[[1]]) ) + 
+  geom_vline(xintercept = 9, color = "red") + ylab("Serum BC Level") +
+  ggtitle("Patient 11, Dose 15 mg/day")
+p2 <- ggplot() + 
+  geom_line(aes(x=Months, y=bcarots[[2]]) ) + 
+  geom_vline(xintercept = 9, color = "red") + ylab("Serum BC Level") +
+  ggtitle("Patient 40, Dose 15 mg/day")
+p3 <- ggplot() + 
+  geom_line(aes(x=Months, y=bcarots[[3]]) ) + 
+  geom_vline(xintercept = 9, color = "red") + ylab("Serum BC Level") +
+  ggtitle("Patient 16, Dose 30 mg/day")
+p4 <- ggplot() + 
+  geom_line(aes(x=Months, y=bcarots[[4]]) ) + 
+  geom_vline(xintercept = 9, color = "red") + ylab("Serum BC Level") +
+  ggtitle("Patient 35, Dose 30 mg/day")
+p5 <- ggplot() + 
+  geom_line(aes(x=Months, y=bcarots[[5]]) ) + 
+  geom_vline(xintercept = 9, color = "red") + ylab("Serum BC Level") +
+  ggtitle("Patient 47, Dose 45 mg/day")
+p6 <- ggplot() + 
+  geom_line(aes(x=Months, y=bcarots[[6]]) ) + 
+  geom_vline(xintercept = 9, color = "red") + ylab("Serum BC Level") +
+  ggtitle("Patient 9, Dose 45 mg/day")
+p7 <- ggplot() + 
+  geom_line(aes(x=Months, y=bcarots[[7]]) ) + 
+  geom_vline(xintercept = 9, color = "red") + ylab("Serum BC Level") +
+  ggtitle("Patient 21, Dose 60 mg/day")
+p8 <- ggplot() + 
+  geom_line(aes(x=Months, y=bcarots[[8]]) ) + 
+  geom_vline(xintercept = 9, color = "red") + ylab("Serum BC Level") +
+  ggtitle("Patient 42, Dose 60 mg/day")
+
+ggsave("predplots.png", arrangeGrob(p1, p2, p3, p4, nrow = 2, ncol = 2))
+ggsave("predplots2.png", arrangeGrob(p5, p6, p7, p8, nrow = 2, ncol = 2))
 ```
 
 

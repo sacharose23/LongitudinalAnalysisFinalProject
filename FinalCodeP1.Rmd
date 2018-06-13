@@ -277,22 +277,20 @@ ggplot() +
 # mean plots
 # change dose into a factor
 bc$dose <- as.factor(bc$dose)
-mean1 <- ggplot(bc, aes(x=month, y=bcarot, fill= dose)) +
+mean1 <- ggplot(bc %>% filter(dose != 0 & month > 3 & month < 10), aes(x=month, y=bcarot, fill= dose)) +
   geom_point(pch=1) + 
   geom_smooth() + 
   ggtitle("Mean Plot of Data Stratified by Doses of Treatment") + 
   ylab("BC Level") + 
-  xlab("Month") + 
-  geom_vline(xintercept=c(3,9))
+  xlab("Month") 
 
 # w/o patient 57
-mean2 <- ggplot(bc %>% filter(ptid != 57), aes(x=month, y=bcarot, fill= dose)) +
+mean2 <- ggplot(bc %>% filter(dose != 0 & month > 3 & month < 10 & ptid != 57), aes(x=month, y=bcarot, fill= dose)) +
   geom_point(pch=1) + 
   geom_smooth() + 
   ggtitle("Without Patient 57") + 
   ylab("BC Level") + 
-  xlab("Month") + 
-  geom_vline(xintercept=c(3,9))
+  xlab("Month") 
 
 # w/o placebo group since we know that placebo doesn't affect serum beta-carotene levels
 mean3 <- ggplot(bc %>% filter(dose != 0 & month >= 4), aes(x=month, y=bcarot, fill= dose)) +
@@ -303,7 +301,7 @@ mean3 <- ggplot(bc %>% filter(dose != 0 & month >= 4), aes(x=month, y=bcarot, fi
   xlab("Month") + 
   geom_vline(xintercept=9)
 
-ggsave("meanplots.png", arrangeGrob(mean1, mean2, mean3))
+ggsave("meanplots.png", arrangeGrob(mean2, mean3))
 
 ```
 
