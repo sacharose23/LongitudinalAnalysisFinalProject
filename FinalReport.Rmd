@@ -55,6 +55,8 @@ $Y_{ij}= \beta_0+\beta_1Tx_i+\beta_2mc.base_{i}+\beta_3month_{ij} + \beta_4Tx_i*
 
 To investigate whether the impact of BC supplementation on serum BC levels over time was dose-dependent, we focused on Treatment Phase and only those who received supplementation. Our mean model here was $E[Y_{ij}]=\beta_0+\beta_1(dose_i/15)+\beta_2mc.base_i+\beta_3t_{ij}+\beta_4t_{ij}(dose_i/15)$. Instead of an indicator variable for treatment, we tranformed dose by dividing by 15 for better interpretability. 
 
+Our final secondary aim was to build a predictive model for serum BC level if patients were to extend their supplementation another three months. We used Bayesian Inference for linear mixed effects (LME) model in order to create a predictive model. Here, we were able to place non-informative priors, and through Gibbs sampling technique we were able to draw from the posterior distribution of the parameters. From there, we were able to obtain marginal estimates as well as subject-specific random intercepts and slopes. Our covariance matrix for our random effects was assumed to folow an inverse Wishart distribution. Here, we ignored vitamin E levels, BMI, and age based on our exploration of these covariates and their effect on the impact that supplementation had on serum BC levels. Here is our mean model: $E[Y_{ij}|\vec{b_i}] = \beta_0 + \beta_{C1}Tx_i + \beta_{C2}Male_i + \beta_{C3}Chol_i + \beta_{C4}base_i + \beta_{L1}month_{ij} + \beta_{L2}Tx_i\cdot month_{ij}$. Implementation of the model was conducted using 'rjags' package version 4-6.
+
 
 # Results
 
@@ -75,7 +77,7 @@ Table 1 shows the estimates for these regression parameters after fitting models
 
 However, when we eliminate the observations from Patient 57, our inferences change. Our estimate for $\beta_1$ increases to $1055.52$ and the robust standard error decreases so that our new 95% CI is [991.29, 1119.74] ug/mL. This gives us the same conclusion as the previous model, except with more precision and magnitude. The big difference is in our assessment of the trajectories. $\widehat{\beta_4} + \widehat{\beta_3}$ is now significant. We estimate that $18.00$ ug/mL is the relative change in serum BC for every 1 month increase in time among treated patients who start the trial with similar baseline serum BC (95% CI: [4.46, 31.55] ug/mL). In other words, the estimated trajectory of serum BC among treated patients is $11.84$ ug/mL higher than that of placebo-treated patients (95% CI: [1.75, 21.94] ug/mL). Relatively speaking, this is only a slight difference in slope within a six-month period. It's also very important to remember that our sample for placebo-treated patients ($N_P=9$) is very small compared with the treated group ($N_T=35$). So, we must be cautious with our inferences here in general.
 
-The next question of interest is if the impact of BC supplementation on serum BC levels over time is dose-dependent, and if so, does the rate at which patients return to baseline after ceasing supplementation also differ by dosage levels. Recall our mean model fitted: $E[Y_{ij}]=\beta_0+\beta_1(dose_i/15)+\beta_2mc.base_i+\beta_3t_{ij}+\beta_4t_{ij}(dose_i/15)$. We will answer both questions with the same model; however, using data from different study phases. For the first part of the question, we focused on the Treatment Phase; for the second part of the question, we focused on the Post-Treatment Phase ($mc.base_i$ will be the mean-centered average of the serum BC levels in the Treatment Phase for the $i^{th}$ patient). In the post-treatment phase, the EDA eluded to an autoregressive-1 working correlation structure. So, unlike the previous models, we fitted the GEE post-treatment model using an AR-1 covariance structure. Our residuals plot shows slight funneling as fitted values increase, so we again used robust variance estimates. 
+The next question of interest is if the impact of BC supplementation on serum BC levels over time is dose-dependent, and if so, does the rate at which patients return to baseline after ceasing supplementation also differ by dosage levels. Recall our mean model fitted: $E[Y_{ij}]=\beta_0+\beta_1(dose_i/15)+\beta_2mc.base_i+\beta_3t_{ij}+\beta_4t_{ij}(dose_i/15)$. We will answer both questions with the same model; however, using data from different study phases. For the first part of the question, we focused on the Treatment Phase; for the second part of the question, we focused on the Post-Treatment Phase ($mc.base_i$ will be the mean-centered average of the serum BC levels in the Treatment Phase for the $i^{th}$ patient). In the post-treatment phase, the EDA eluded to an autoregressive-1 working correlation structure. So, unlike the previous models, we fitted the GEE post-treatment model using an AR-1 covariance structure. Our residuals plot shows slight funneling as fitted values increase, so we again used robust variance estimates (ref: Appendix A).
 
 If $\beta_1=0$ and $\beta_4=0$, then all treated patients ($N_T=35$) would have the same model regardless of their dosage level. Again, here we are only focusing on the treated patients, so Patient 57 is of no concern. Our mean plots in Figure 2 shows that dosage level may be influential during the treatment, but the dosage level may not be influential in the decrease to baseline of serum BC levels post-treatment. The post-treatment trajectories seem to stay parallel with one another with highest dose above and lowest dose below.
 
@@ -103,86 +105,63 @@ Table 3 shows the output from our model, which will answer our second question a
 
 ## Secondary Analysis
 
+First, we did extensive EDA (Appendix A: scatterplots, mean plots, and spaghetti plots) on the other time-invariant covariates (age, gender, body mass index (BMI), and cholesterol). Here are some of the things we noticed. BMI seems to have a negative association with average serum BC levels. Female patients seemed to have a mean serum BC level consistent above the male patients in all phases of the study. Then, we did EDA on age, BMI, and cholesterol as categorical and continuous covariates. Looking at them as categories, we saw slight mean serum BC level differences. Lower cholesterol and older ages seemed associated with lower serum BC levels, whereas the opposite stayed true with BMI. 
+
+After fitting one model for gender and two models per all other covariates (age, BMI, and cholesterol), one assuming continuous type of variable and another for categorical, we obtained the results laid out in Tables 4 and 5. 
+
+Our results support males and females having different intercepts, but similar trajectories of BC levels over time during treatment. We estimate that males have 148.53 ug/mL lower mean difference in serum BC levels over time during the treatment than females with similar baseline BC measures (95% CI [-288.94,-8.11]). 
+
+There was not strong enough evidence to reject the null for age and BMI; age and BMI do not seem to effect the impact of BC supplementation on serum BC levels over time. It is interesting to note that when BMI is treated as a categorical variable parsed out using quantiles, individuals with BMI between 25.35 and 27.63 $kg/m^2$ have a statistically significant lower mean serum BC levels than individuals with BMI less than 23.06 $kg/m^2$. More exploration with the association between BMI and serum BC levels should be investigated with larger sample sizes. 
+
+For cholesterol, our conclusions for both models, treating cholesterol as a categorical variable and then as a continuous variable, are similar. Both support a difference in intercepts, but not a difference in trajectories. There is strong evidence for a positive correlation between cholesterol and serum BC levels. We estimate that the mean difference in BC levels over time during the treatment comparing two subpopulations that differ in cholesterol by 50 mg/dL with similar baseline BC measures is $133.52$ ug/mL (95% CI [68.61, 198.43]). 
+
 ```{r cov output}
 table <- dget("cov.output")
 kable <- kable(table, format="latex", booktabs=T, align='c', 
-               caption = "Table #: Model Outputs of the Effects of Various Covariates on Impact of BC Supplementation on Serum BC Levels over Time")
+               caption = "Table 4: Model Outputs of the Effects of Various Covariates on Impact of BC Supplementation on Serum BC Levels over Time")
 kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
 ```
 
 ```{r cov2 output}
 table <- dget("cov2.output")
 kable <- kable(table, format="latex", booktabs=T, align='c', 
-               caption = "Table #: Model Outputs of the Effects of Various Categorical Covariates on Impact of BC Supplementation on Serum BC Levels over Time")
+               caption = "Table 5: Model Outputs of the Effects of Various Categorical Covariates on Impact of BC Supplementation on Serum BC Levels over Time")
 kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
 ```
 
-### Gender
-Null hypothesis is that there is no difference by age in the effect of BC supplementation on serum BC levels over time. Based on our EDA before the treatment, females seemed to have higher BC levels than males. So, it's not too surprising that our model shows males and females having different intercepts; however, we have evidence that supports similar trajectories of BC levels over time between male and female during treatment.
+Another big secondary question of interest is whether BC supplementation has an effect on serum vitamin E levels during and after treatment. Figure 3 shows us that serum vitamin E Levels appear to be similar to serum BC levels in trends during the Treatment Phase. However, there seems to be a substantial decrease below the mean levels of the placebo group. This is definitely different than how serum BC levels behave post-treatment. Figure 3 also contains a spaghetti plot that shows a slight increase in vitamin E levels in most subjects after month 14. There is not enough data here to explore than phenomena further. If we were to continue follow up visits with the treated patients after month 15, maybe there trends move back towards the normal levels of vitamin E demonstrated by the placebo group.
 
-We estimate that males have 148.53 ug/mL lower mean difference in BC levels over time during the treatment than females with similar baseline BC measures (95% confidence interval [-288.94,-8.11]). 
-
-### Age
-
-We fit two models analyzing age as a possible covariate in the effect of BC supplementation on serum BC levels over time: age as a categorical variable and age as a continuous variable. 
-Our null hypothesis is that there is no difference by age in the effect of BC supplementation on serum BC levels over time. Based on our EDA before the treatment, there was weak suspicion of older patients associated with high serum BC levels. So, it's not too surprising that our models show evidence supporting the null; our 95% confidence intervals for our estimates cooresponding to age and the interaction betweenn age and time failed to reject the null.
-
-### BMI
-
-Our models that investigated the effect of baseline BMI on the impact of BC supplementation on serum BC levels over time were similar to what we did for age. 
-
-Our null hypothesis for BMI is that there is no difference by BMI in the effect of BC supplementation on serum BC levels over time. Based on our EDA before the treatment, there was moderate suspicion of lower BMI patients associated with high serum BC levels. 
-
-Our conclusions seem to differ depending on if we treat BMI as a categorical variable or a continuous variable. As a continuous variable, BMI does not seem to be a change in the effect of BC supplementation on serum BC levels over time. But, as a categorical variable, the increase of BMI changes the mean serum BC levels, but not the slopes over time. 
-
-### Cholesterol
-
-Our models that investigated the effect of baseline cholesterol on the impact of BC supplementation on serum BC levels over time were similar to what we did for age. 
-
-Our null hypothesis for cholesterol is that there is no difference by cholesterol in the effect of BC supplementation on serum BC levels over time. Based on our EDA before the treatment, there was moderate suspicion of high cholesterol patients associated with high serum BC levels. 
-
-Our conclusions for both models, treating cholesterol as a categorical variable and then as a continuous variable, are similar. Both support a difference in intercepts, but not a difference in trajectories. 
-
-There is strong evidence for a positive correlation between cholesterol and serum BC levels. We estimate that the mean difference in BC levels over time during the treatment comparing two subpopulations that differ in cholesterol by 50 mg/dL with similar baseline BC measures is 133.52 ug/mL (95% confidence interval [68.61, 198.43]). 
-
+```{r pairs plot, echo=FALSE, fig.cap="Figure 3: Mean and Spaghetti Plots of Serum Vitamin E Levels Adjusted for Treatment", out.width = '50%', out.height='50%'}
+knitr::include_graphics("vite.png")
+```
 
 ```{r vite table}
 table <- dget("vite table")
 kable <- kable(table, format="latex", booktabs=T, align='c', 
-               caption = "Table #: Model Outputs of the Effects BC Supplementation on Serum Vitamin E Levels over Time")
+               caption = "Table 6: Model Outputs of the Effects BC Supplementation on Serum Vitamin E Levels over Time")
 kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
 ```
 
-### Vitamin E CONCLUSIONS
-Vitamin E levels in the placebo group seem constant over this time period
-Vit E levels in treatment group seem to increase during treatment period and then
-decrease substantially after (average being below that of the placebo group)
-Spaghetti plots shows a little bit of an increase in Vit E for treatment group after month 14
-it's an interesting note, but there is not enough data to understand the change at month 14
-maybe the Vit E levels are trending back to levels similar to the placebo group ("normal levels")
+The variogram (Appendix A) for serum vitamin E levels eluded to an exchangeable covariance structure. Here we fit two models: one for Treatment phase and one for Post-Treatment phase. Table 6 contains our results from both models. Our results agree with what we saw in the EDA. We estimate the mean difference in serum vitamin E levels between treated patients and placebo-treated patients is $0.528$ ug/mL (95% CI: [0.201,0.855]) during the Treatment phase and 4.53 ug/mL (95% CI: [2.83, 6.22]) during the Post-Treatment phase. There is no statistically significant difference in trajectory during the Treatment Phase. However, in the Post-Treatment phase, we estimate that difference in rate of serum vitamin E levels decreases by $0.473$ ug/mL for every 1 month increase among treated patients compared to placebo-treated patients with similar baseline serum vitamin E level pre-treatment (95% CI: [-0.620, -0.327] ug/mL).
 
-there is a significant difference in trajectories between those in treatment and those in placebo during months 10-15 as suspected! no surprises there
-there is a significant difference in mean vite e during months 10-15 b/w placebo and tx groups
-
-no significant difference in trajectory between those in treatment and those in placebo during months 4-9
-there is a significant difference in mean vite e during months 4-9 b/w placebo and tx groups
-
-### Prediction Model
-
-To build the predictive model, we used Bayesian Inference for linear mixed effects (LME) model. Here, we were able to place non-informative priors and through Gibbs sampling technique able to draw from the posterior distribution of the parameters. From there, we were able to obtain marginal estimates as well as subject-specific random intercepts and slopes. Our covariance matrix for our random effects was assumed to folow an inverse Wishart distribution. Here, we ignored vitamin E levels, BMI, and age based on our exploration of these covariates and their effect on the impact that supplementation had on serum BC levels. Here is our mean model: $$E[Y_{ij}|\vec{b_i}] = \beta_0 + \beta_{C1}Tx_i + \beta_{C2}Male_i + \beta_{C3}Chol_i + \beta_{C4}base_i + \beta_{L1}month_{ij} + \beta_{L2}Tx_i\cdot month_{ij}$$. Implementation of the model was conducted using 'rjags' package version 4-6.
+Lastly, we created a predictive model. Recall our mean linear mixed effects model: $E[Y_{ij}|\vec{b_i}] = \beta_0 + \beta_{C1}Tx_i + \beta_{C2}Male_i + \beta_{C3}Chol_i + \beta_{C4}base_i + \beta_{L1}month_{ij} + \beta_{L2}Tx_i\cdot month_{ij}$. Trace, density, and autocorrelation plots were used to confirm convergence. Table 7 gives us means and standard deviations from the posterior distributions of each regression parameter and those for the standard deviations of the random effects. Predictions are shown in Figure 4; two patients from each dosage group was randomly selected and their serum BC levels were predicted if they were to continue supplementation for another three months past month 9. 
 
 ```{r}
 table <- dget("jagstable")[c(1:6,9,10),]
 row.names(table) <- c("Tx", "Male", "Cholesterol", "Mc.Base", "Tx:Month", "Intercept", "sd(b0)", "sd(b1)")
 kable <- kable(table, format="latex", booktabs=T, align='c', 
-               caption = "Table #: Jags Output from Predictive Model")
+               caption = "Table 7: Jags Output from Predictive Model")
 kable_styling(kable, latex_options = c("striped", "hold_position"), full_width = F)
 ```
 
-```{r pred plots, echo=FALSE, fig.cap="Prediction Plots for Two Randomly Chosen Patients in Each Dose Level", out.width = '50%', out.width='50%'}
+```{r pred plots, echo=FALSE, fig.cap="Figure 4: Prediction Plots for Two Randomly Chosen Patients in Each Dose Level", out.width = '50%', out.width='50%'}
 knitr::include_graphics("predplots.png")
 knitr::include_graphics("predplots2.png")
 ```
+
+# Discussion
+
+
 
 # Appendix A
 
@@ -209,7 +188,7 @@ knitr::include_graphics("pairs.png")
 knitr::include_graphics("pairs2.png")
 ```
 
-```{r pairs plot, echo=FALSE, fig.cap="Subject-Specific Random Effects", out.width = '50%', out.height='50%'}
+```{r pairs plot, echo=FALSE, fig.cap="Subject-Specific Random Effects During Treatment Phase", out.width = '50%', out.height='50%'}
 knitr::include_graphics("randeffplot.jpg")
 ```
 
@@ -226,7 +205,8 @@ knitr::include_graphics("bmi.png")
 ```
 
 ```{r covariates plots, echo=FALSE, fig.cap="Mean Plots of Serum BC Levels vs. Various Covariates (Treatment)", out.width = '50%', out.width='50%'}
-knitr::include_graphics("covplots.png")
+knitr::include_graphics("covplot1.png")
+knitr::include_graphics("covplots2.png")
 ```
 
 ```{r covariates plots, echo=FALSE, fig.cap="Spaghetti Plots (by Cholesterol, BMI, and Age Categories, respectively)", out.width = '50%', out.width='50%'}

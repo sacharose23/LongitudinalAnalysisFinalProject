@@ -195,7 +195,8 @@ p.age <- ggplot(bc.sub) +
   geom_smooth(aes(x=month, y=bcarot, color=agecat), se=F) + 
   labs( x = "Month", y = "Serum BC Levels", color = "Age \n Category \n")
 
-ggsave("covplots.png", arrangeGrob(p.male, p.chol, p.bmi, p.age))
+ggsave("covplot1.png", p.male)
+ggsave("covplots2.png", arrangeGrob(p.chol, p.bmi, p.age))
 
 # OBSERVATIONS
 # It may be true that lower chol --> lower bcarot
@@ -409,9 +410,9 @@ out2 <- summary(fit)$coeff[,c(1,4)]
 plot(fit$fitted, fit$residuals, main="Residuals vs. Fitted Values")
 abline(h=0)
 
-table <- cbind(out1[,1],out2[,1],out1[,2],out2[,2])
+table <- cbind(out1[,1],out1[,2],out2[,1],out2[,2])
 row.names(table) <- c("Intercept", "Tx", "Mc.Base", "Month", "Tx:Month")
-colnames(table) <- c("Tx Phase \n Estimates", "Post-Tx Phase \n Estimates", "Tx Phase \n Robust SE", "Post-Tx Phase \n Robust SE")
+colnames(table) <- c("Tx Phase \n Estimates", "Tx Phase \n Robust SE", "Post-Tx Phase \n Estimates","Post-Tx Phase \n Robust SE")
 dput(table, "vite table")
 ```
 
